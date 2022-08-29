@@ -1,0 +1,1 @@
+/scratch/fcormier/t2k/ml/output_wcsim/aug23_joint_halfCylinder_randomSeed/

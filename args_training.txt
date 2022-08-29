@@ -1,0 +1,5 @@
+--doTraining
+--plotInput=/scratch/fcormier/t2k/ml/training/resnet_aug25_1/
+--plotOutput=output/
+--training_input=data/training_paths.txt
+--training_output_path=/scratch/fcormier/t2k/ml/training/resnet_aug25_1/
