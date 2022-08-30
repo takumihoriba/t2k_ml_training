@@ -15,7 +15,7 @@ from WatChMaL.analysis.plot_utils import disp_learn_hist_smoothed
 
 from torch.utils.data.sampler import SubsetRandomSampler
 
-from runner_util import utils
+from runner_util import utils, train_config
 
 parser = argparse.ArgumentParser(fromfile_prefix_chars='@')
 parser.add_argument("--doTraining", help="run training", action="store_true")
@@ -32,14 +32,6 @@ args = parser.parse_args(['--training_input','foo','@args_training.txt',
 
 logger = logging.getLogger('train')
 
-class train_config():
-    def __init__(self,epochs, report_interval, val_interval, num_val_batches, checkpointing, save_interval) -> None:
-            self.epochs=epochs
-            self.report_interval=report_interval
-            self.val_interval = val_interval
-            self.num_val_batches = num_val_batches
-            self.checkpointing = checkpointing
-            self.save_interval = save_interval
 
 if args.doTraining:
 
