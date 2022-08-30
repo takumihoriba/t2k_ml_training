@@ -5,15 +5,20 @@ class utils():
         config = configparser.ConfigParser()
         config.read(parser_file)
         arch = config['DEFAULT']['NetworkArchitecture'] 
-        print(arch)
         self.parser_string(config, arch)
-        print("test")
 
     def parser_string(self, config, arch):
         for key in config[arch]:
-            pass
+            if 'InputPath'.lower() in key.lower():
+                self.inputPath = config[arch][key]
+            if 'OutputPath'.lower() in key.lower():
+                self.outputPath = config[arch][key]
             if 'NetworkArchitecture'.lower() in key.lower():
                 self.arch = config[arch][key]
+            if 'Classifier'.lower() in key.lower():
+                self.classifier = config[arch][key]
+            if 'FeatureExtractor'.lower() in key.lower():
+                self.featureExtractor = config[arch][key]
             elif 'DoClassification'.lower() in key.lower():
                 self.doClassification = config[arch].getboolean(key)
             elif 'DoRegression'.lower() in key.lower():
@@ -37,7 +42,7 @@ class utils():
             elif 'DoCheckpointing'.lower() in key.lower():
                 self.doCheckpointing = config[arch].getboolean(key)
             elif 'SaveInterval'.lower() in key.lower():
-                if 'None' in config[arch[key]]:
+                if 'None' in config[arch][key]:
                     self.saveInterval = None
                 else:
                     self.saveInterval = config[arch][key]

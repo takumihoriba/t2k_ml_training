@@ -43,6 +43,11 @@ class train_config():
 
 if args.doTraining:
 
+    settings = utils()
+    if settings==0:
+        print("DID NOT INITIALIZE PROPERLY")
+        exit
+
     num_files=1
     file_paths = args.training_input
     if ".txt" in args.training_input:
