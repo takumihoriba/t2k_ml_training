@@ -15,9 +15,12 @@ from WatChMaL.analysis.plot_utils import disp_learn_hist_smoothed
 
 from torch.utils.data.sampler import SubsetRandomSampler
 
+from runner_util import utils
+
 parser = argparse.ArgumentParser(fromfile_prefix_chars='@')
 parser.add_argument("--doTraining", help="run training", action="store_true")
 parser.add_argument("--doQuickPlots", help="run training", action="store_true")
+parser.add_argument("--testParser", help="run training", action="store_true")
 parser.add_argument("--plotInput", help="run training")
 parser.add_argument("--plotOutput", help="run training")
 parser.add_argument("--training_input", help="where training files are")
@@ -72,6 +75,9 @@ if args.doTraining:
     engine.configure_optimizers(torch.optim.Adam)
     train_config_test = train_config(0, 50, 50 , 5, False, None)
     engine.train(train_config_test)
+
+if args.testParser:
+    settings = utils()
 
 if args.doQuickPlots:
     fig = disp_learn_hist_smoothed(args.plotInput, losslim=2, show=False)
