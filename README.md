@@ -38,11 +38,14 @@ If you want to run training, in _args\_training.txt_, set
 
 ```
 --doTraining
---training_input=[...]
---training_output_path=[...]
 ```
 
-where training_input is a path and name to text file with absolute path of the directory where the training data is. There should be one file, and the code right now expects it to be named _combine\_combine.hy_. This can be modified in _training\_runner.py_. The training output path is where the best state, log files, and evaluation data is saved for the training. 
+where training_input is a path and name to text file with absolute path of the directory where the training data is. 
+
+#### Training configuration file
+
+Use _util\_config.ini_ to choose all the settings for training. This includes input file path, output model path, which architecture, how many epochs, etc. 
+This will be managed by the _utils_ class in _runner\_util.py_. Right now ResNet and PointNet are supported, with their own independent set of settings. The _utils_ class object is typically called _settings_, and is used throughout the code to call up settings from _util\_config.ini_ when needed.
 
 ### Summarizing training
 

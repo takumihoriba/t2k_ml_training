@@ -51,7 +51,7 @@ if args.doTraining:
     engine = ClassifierEngine(model, 0, 0, settings.outputPath)
 
     engine.configure_data_loaders(data_config, data_loader, False, 0, train_indices, test_indices, val_indices, settings)
-    engine.configure_optimizers(settings.optimizer_engine)
+    engine.configure_optimizers(settings)
     settings.set_output_directory()
     settings.save_options(settings.outputPath, 'training_settings')
     engine.train(settings)

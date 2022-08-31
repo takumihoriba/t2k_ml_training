@@ -94,6 +94,8 @@ class utils():
                 self.pmtPositionsFile = config[arch][key]
             elif 'RestoreBestState'.lower() in key.lower():
                 self.restoreBestState = config[arch].getboolean(key)
+            elif 'LearningRate'.lower() in key.lower():
+                self.lr = config[arch].getfloat(key)
             else:
                 print(f'Variable {key} not found, exiting')
                 return 0
