@@ -35,43 +35,26 @@ logger = logging.getLogger('train')
 
 if args.doTraining:
 
+    #Choose settings for utils class in util_config.ini
     settings = utils()
     if settings==0:
-        print("DID NOT INITIALIZE PROPERLY")
+        print("Settings did not initialize properly, exiting...")
         exit
 
-    num_files=1
-    file_paths = args.training_input
-    if ".txt" in args.training_input:
-        print(f'Getting files from: {str(args.training_input)}')
-        text_file = open(args.training_input, "r")
-        file_paths = text_file.readlines()
-        num_files = len(file_paths)
 
-    do_resnet=True
-    do_pointnet=False
-    if do_resnet==True:
-        do_pointnet=False
+    #Initialize training configuration, classifier and dataset for engine training
+    settings.initTrainConfig()
+    settings.initClassifier()
+    settings.initOptimizer()
+    data_config, data_loader, train_indices, test_indices, val_indices = settings.initDataset()
+    model = settings.classification_engine
+    engine = ClassifierEngine(model, 0, 0, settings.outputPath)
 
-    gpu = 0 #TODO: Assign in utils
-    print("Running main worker function on device: {}".format(gpu))
-    torch.cuda.set_device(gpu)
-    if do_pointnet:
-        model = Classifier( PointNetFeat(k=5), PointNetFullyConnected(num_inputs=256, num_classes=3), num_classes=3).cuda() 
-        engine = ClassifierEngine(model, 0, gpu, args.training_output_path)
-        length = len(h5py.File(file_paths[0].strip('\n')+'combine_combine.hy',mode='r')['event_hits_index'])
-        data_config = {"dataset": file_paths[0].strip('\n')+'combine_combine.hy', "sampler":SubsetRandomSampler, "data_class": PointNetT2KDataset, "use_positions": True, "use_time":True}
-        data_loader = {"batch_size": 512, "num_workers":1}
-    if do_resnet:
-        model = Classifier(resnet18(num_input_channels=2, num_output_channels=4), PassThrough(5,3), num_classes=3).cuda()
-        engine = ClassifierEngine(model, 0, gpu, args.training_output_path)
-        length = len(h5py.File(file_paths[0].strip('\n')+'combine_combine.hy',mode='r')['event_hits_index'])
-        data_config = {"dataset": file_paths[0].strip('\n')+'combine_combine.hy', "sampler":SubsetRandomSampler, "data_class": T2KCNNDataset, "pmt_positions_file": 'data/sk_wcsim_imagefile.npy'}
-        data_loader = {"batch_size": 256, "num_workers":1}
-    engine.configure_data_loaders(data_config, data_loader, False, 0, indices = length)
-    engine.configure_optimizers(torch.optim.Adam)
-    train_config_test = train_config(0, 50, 50 , 5, False, None)
-    engine.train(train_config_test)
+    engine.configure_data_loaders(data_config, data_loader, False, 0, train_indices, test_indices, val_indices, settings)
+    engine.configure_optimizers(settings.optimizer_engine)
+    settings.set_output_directory()
+    settings.save_options(settings.outputPath, 'training_settings')
+    engine.train(settings)
 
 if args.testParser:
     settings = utils()
