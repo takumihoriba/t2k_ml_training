@@ -26,6 +26,44 @@ This conda environment should give you access to most libraries needed in this r
 conda activate t2k_ml_train
 ```
 
+### Running on Compute Canada Clusters
+
+Preferably run this code on narval.computecanada.ca by
+
+```
+ssh username@narval.computecanada.ca
+```
+
+For code editing and light work you can run on the login node. But to run these functions with large
+amounts of data, you should run it in an interactive batch job. Compute Canada uses the slurm schedul
+er. To run an interactive batch job which only uses CPU, do:
+
+
+```
+srun --mem-per-cpu=4G --nodes=1 --ntasks-per-node=4 --time=08:00:00 --pty bash -i
+```
+
+where _mem-per-cpu_ is the amount of memory you request per tasks, _nodes_ is the number of entire no
+des you request (usually 1), _ntasks-per-node_ is the number of CPUs per node you request, and _time_
+ is the maximum amount of time your job will take. You should customize these requests to whatever yo
+u think you will need, but this is a good baseline. Once you run this command, your shell will now be
+ running in on of the compute nodes, and you will be able to run cod ehtat uses numerous CPUs and lar
+ger amounts of memory.
+
+It is possible that large files will use more memory than allocated. If so, the server will kill the
+process. You will have to exit the interactive job (Ctrl-D) and rerun the _srun_ command with higher
+_mem-per-cpu_.
+
+### GPU interactive jobs
+
+To start a GPU interactive job, the _srun_ command is
+
+```
+srun --mem-per-cpu=4G --nodes=1 --gpus-per-node=1 --ntasks-per-node=4 --time=8:00:00 --pty bash -i
+```
+
+where the options are the same as before, but _gpus-per-node_ has been added; this particular one requests exactly one GPU.
+
 
 
 ### Runner file

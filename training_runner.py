@@ -11,7 +11,7 @@ from WatChMaL.watchmal.model.resnet import resnet18
 from WatChMaL.watchmal.model.classifier import PointNetFullyConnected
 from WatChMaL.watchmal.engine.engine_classifier import ClassifierEngine
 from WatChMaL.watchmal.dataset.t2k.t2k_dataset import PointNetT2KDataset, T2KCNNDataset
-from WatChMaL.analysis.plot_utils import disp_learn_hist_smoothed
+from WatChMaL.analysis.plot_utils import disp_learn_hist_smoothed, disp_learn_hist
 
 from torch.utils.data.sampler import SubsetRandomSampler
 
@@ -60,5 +60,5 @@ if args.testParser:
     settings = utils()
 
 if args.doQuickPlots:
-    fig = disp_learn_hist_smoothed(args.plotInput, losslim=2, show=False)
+    fig = disp_learn_hist(args.plotInput, losslim=2, show=False)
     fig.savefig(args.plotOutput+'resnet_test.png', format='png')

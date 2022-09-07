@@ -1,5 +1,5 @@
---doTraining
---plotInput=/scratch/fcormier/t2k/ml/training/resnet_aug25_1/
---plotOutput=output/
+--doQuickPlots
+--plotInput=/scratch/fcormier/t2k/ml/training/resnet_emu_aug31_2/
+--plotOutput=output/resnet_emu_aug31_2/
 --training_input=data/training_paths.txt
 --training_output_path=/scratch/fcormier/t2k/ml/training/resnet_aug25_1/
