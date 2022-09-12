@@ -10,13 +10,13 @@
             "request": "attach",
             "justMyCode": false,
             "connect": {
-                "host": "ng20604",
+                "host": "triumf-ml1",
                 "port": 1080
             },
             "pathMappings": [
                 {
                     "localRoot": "${workspaceFolder}",
-                    "remoteRoot": "/home/fcormier/t2k/t2k_ml_base/training/"
+                    "remoteRoot": "/home/fcormier/t2k/ml/"
                 }
             ],
         }

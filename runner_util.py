@@ -4,11 +4,11 @@ import pickle
 import os
 
 import h5py
+import numpy as np
 
-from WatChMaL.watchmal.model.classifier import Classifier, PassThrough
+from WatChMaL.watchmal.model.classifier import Classifier, PassThrough, PointNetFullyConnected, ResNetFullyConnected
 from WatChMaL.watchmal.model.pointnet import PointNetFeat
 from WatChMaL.watchmal.model.resnet import resnet18
-from WatChMaL.watchmal.model.classifier import PointNetFullyConnected
 from WatChMaL.watchmal.dataset.t2k.t2k_dataset import PointNetT2KDataset, T2KCNNDataset
 
 import torch
@@ -61,6 +61,12 @@ class utils():
                 self.doRegression = config[arch].getboolean(key)
             elif 'UseGPU'.lower() in key.lower():
                 self.useGPU = config[arch].getboolean(key)
+            elif 'GPUNumber'.lower() in key.lower():
+                if len(config[arch][key]) > 1:
+                    self.getGPUNumber(config[arch][key])
+                else:
+                    self.gpuNumber = config[arch].getint(key)
+                    self.multiGPU = False
             elif 'BatchSize'.lower() in key.lower():
                 self.batchsize = config[arch].getint(key)
             elif 'Optimizer'.lower() in key.lower():
@@ -96,6 +102,8 @@ class utils():
                 self.restoreBestState = config[arch].getboolean(key)
             elif 'LearningRate'.lower() in key.lower():
                 self.lr = config[arch].getfloat(key)
+            elif 'WeightDecay'.lower() in key.lower():
+                self.weightDecay = config[arch].getfloat(key)
             else:
                 print(f'Variable {key} not found, exiting')
                 return 0
@@ -135,18 +143,29 @@ class utils():
                 if self.batch is True:
                     exit
 
+    def getGPUNumber(self, gpu_input):
+        numbers = gpu_input.split(",")
+        numbers = list(map(int, numbers))
+        self.gpuNumber = numbers
+        self.multiGPU = True
+
+    def checkLabels(self):
+        with h5py.File(self.inputPath,mode='r') as h5fw:
+            min_label = np.amin(h5fw['labels'])
+            self.minLabel = min_label
+
     def initClassifier(self):
         """Initializes the classifier and regression to be used in the main classification engine
         """
         #make a dictionary to avoid ugly array of if statements. Add lambda so that functions only get used if called in classification_engine below
         #use lower() to ignore any mistakes in capital letter in config file
         classifier_dictionary = {'PassThrough'.lower(): lambda : PassThrough(), 'PointNetFullyConnected'.lower(): lambda : PointNetFullyConnected(num_inputs=256, num_classes=self.numClasses)}
-        regression_dictionary = {'resnet18'.lower(): lambda : resnet18(num_input_channels=1+int(self.useTime), num_output_channels=4), 'PointNetFeat'.lower(): lambda : PointNetFeat(k=4+int(self.useTime))}
+        regression_dictionary = {'resnet18'.lower(): lambda : resnet18(num_input_channels=1+int(self.useTime), num_output_channels=self.numClasses), 'PointNetFeat'.lower(): lambda : PointNetFeat(k=4+int(self.useTime))}
 
         #Make sure to call () after every function because they are defined as lambdas in dictionary
         self.classification_engine = Classifier(regression_dictionary[self.featureExtractor.lower()](), classifier_dictionary[self.classifier.lower()](), self.numClasses) 
         if self.useGPU:
-            gpu=0
+            gpu=self.gpuNumber
             print("Running main worker function on device: {}".format(gpu))
             torch.cuda.set_device(gpu)
             self.classification_engine = self.classification_engine.cuda()
@@ -160,14 +179,13 @@ class utils():
         #dictionary to avoid if statements
         #use lower() to ignore any mistakes in capital letter in config file
         dataset_dictionary = {'T2KCNNDataset'.lower(): T2KCNNDataset, 'PointNetT2KDataset'.lower(): PointNetT2KDataset}
-        data_config = {"dataset": self.inputPath.strip('\n'), "sampler":SubsetRandomSampler, "data_class": dataset_dictionary[self.dataModel.lower()]}
+        data_config = {"dataset": self.inputPath.strip('\n'), "sampler":SubsetRandomSampler, "data_class": dataset_dictionary[self.dataModel.lower()], "is_distributed": self.multiGPU}
         #TODO: Smarter way to add architecture-dependent settings to data_config
         if 'ResNet'.lower() in self.arch.lower():
             data_config['pmt_positions_file'] = self.pmtPositionsFile
         if 'PointNet'.lower() in self.arch.lower():
             data_config['use_time'] = self.useTime
-        data_loader = {"batch_size": self.batchsize, "num_workers":1}
-        print(data_config)
+        data_loader = {"batch_size": self.batchsize, "num_workers":4}
 
         #Set up indices of train/test/val datasets using TrainTestSplit and TestValSplit from configuration settings
         length = len(h5py.File(self.inputPath.strip('\n'),mode='r')['event_hits_index'])

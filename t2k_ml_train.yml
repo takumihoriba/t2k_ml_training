@@ -4,12 +4,9 @@ channels:
 dependencies:
   - numpy
   - cudatoolkit
-  - hydra
-  - torchaudio
   - pytorch
   - debugpy
   - torchvision
-  - omegaconf
   - h5py
   - pandas
   - matplotlib
