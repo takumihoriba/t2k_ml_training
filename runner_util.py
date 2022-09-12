@@ -104,6 +104,8 @@ class utils():
                 self.lr = config[arch].getfloat(key)
             elif 'WeightDecay'.lower() in key.lower():
                 self.weightDecay = config[arch].getfloat(key)
+            elif 'Seed'.lower() in key.lower():
+                self.seed = config[arch].getint(key)
             else:
                 print(f'Variable {key} not found, exiting')
                 return 0
@@ -190,6 +192,7 @@ class utils():
         #Set up indices of train/test/val datasets using TrainTestSplit and TestValSplit from configuration settings
         length = len(h5py.File(self.inputPath.strip('\n'),mode='r')['event_hits_index'])
         indices = set(range(length))
+        random.seed(a=self.seed)
         train =  set(random.sample(indices, int(self.trainTestSplit*len(list(indices)))))
         test = indices - train
         train_indices = list(train)
