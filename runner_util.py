@@ -172,11 +172,15 @@ class utils():
             torch.cuda.set_device(gpu)
             self.classification_engine = self.classification_engine.cuda()
 
-    def initDataset(self):
+    def initDataset(self, rank):
         """Initializes data_config and data_loader necessary to configure the training engine. Also sets up train/test/validation split of indices
 
         Returns:
-            _type_: _description_
+            data_config: Dictionary of options containing data settings
+            data_loader: Dictionary of options for loading the data
+            train_indices: Indices of the dataset used for training
+            test_indices: Indices of the dataset used for testing
+            val_indices: Indices of the dataset used for validationg
         """
         #dictionary to avoid if statements
         #use lower() to ignore any mistakes in capital letter in config file
@@ -190,18 +194,34 @@ class utils():
         data_loader = {"batch_size": self.batchsize, "num_workers":4}
 
         #Set up indices of train/test/val datasets using TrainTestSplit and TestValSplit from configuration settings
-        length = len(h5py.File(self.inputPath.strip('\n'),mode='r')['event_hits_index'])
-        indices = set(range(length))
         random.seed(a=self.seed)
-        train =  set(random.sample(indices, int(self.trainTestSplit*len(list(indices)))))
-        test = indices - train
-        train_indices = list(train)
-        other_indices = list(test)
-        test_indices = other_indices[0:int(self.testValSplit*len(other_indices))]
-        val_indices = other_indices[int(self.testValSplit*len(other_indices)):len(other_indices)]
+
+        length = len(h5py.File(self.inputPath.strip('\n'),mode='r')['event_hits_index'])
+        unique_root_files, unique_inverse, unique_counts = np.unique(h5py.File(self.inputPath.strip('\n'),mode='r')['root_files'], return_inverse=True, return_counts=True)
+
+        #Based on root files, divide indices into train/val/test
+        length_rootfiles = len(unique_root_files)
+        train_rootfile_indices = random.sample(range(length_rootfiles), int(self.trainTestSplit*len(list(range(length_rootfiles)))))
+        train_indices = np.isin(unique_inverse, train_rootfile_indices)
+        train_indices = np.array(range(length))[train_indices]
+        train_rootfiles_set = set(train_rootfile_indices)
+        index_rootfiles_set = set(range(length_rootfiles))
+        other_rootfiles_indices = list(index_rootfiles_set - train_rootfiles_set)
+        test_rootfile_indices = other_rootfiles_indices[0:int(self.testValSplit*len(other_rootfiles_indices))]
+        val_rootfile_indices = other_rootfiles_indices[int(self.testValSplit*len(other_rootfiles_indices)):len(other_rootfiles_indices)] 
+        test_indices = np.isin(unique_inverse, test_rootfile_indices)
+        test_indices = np.array(range(length))[test_indices]
+        val_indices = np.isin(unique_inverse, val_rootfile_indices)
+        val_indices = np.array(range(length))[val_indices]
+
         print(f'Train and Test sets share no indices: {set(train_indices).isdisjoint(test_indices)}')
         print(f'Train and Val sets share no indices: {set(train_indices).isdisjoint(val_indices)}')
         print(f'Test and Val sets share no indices: {set(test_indices).isdisjoint(val_indices)}')
+
+        test_rootfiles = np.unique(np.array(unique_root_files[unique_inverse])[test_indices])
+        if rank==0:
+            print("Saving Test Rootfies...")
+            np.save(self.outputPath + "test_rootfiles.npy", test_rootfiles)
         
         return data_config, data_loader, train_indices, test_indices, val_indices
 

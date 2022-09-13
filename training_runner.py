@@ -47,19 +47,19 @@ def training_runner(rank, settings):
         rank=rank,
     )
     #Initialize training configuration, classifier and dataset for engine training
+    settings.set_output_directory()
     settings.initTrainConfig()
     settings.initClassifier()
     settings.initOptimizer()
     #If labels do not start at 0, saves offset so that they are changed during training
     settings.checkLabels()
 
-    data_config, data_loader, train_indices, test_indices, val_indices = settings.initDataset()
+    data_config, data_loader, train_indices, test_indices, val_indices = settings.initDataset(rank)
     model = nn.parallel.DistributedDataParallel(settings.classification_engine, device_ids=[settings.gpuNumber])
     engine = ClassifierEngine(model, rank, settings.gpuNumber, settings.outputPath)
 
     engine.configure_data_loaders(data_config, data_loader, settings.multiGPU, 0, train_indices, test_indices, val_indices, settings)
     engine.configure_optimizers(settings)
-    settings.set_output_directory()
     settings.save_options(settings.outputPath, 'training_settings')
     engine.train(settings)
 
