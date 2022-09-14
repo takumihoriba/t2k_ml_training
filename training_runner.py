@@ -3,12 +3,14 @@ import debugpy
 import h5py
 import logging
 import os
+import numpy as np
 
 import torch
 import torch.multiprocessing as mp
 import torch.nn as nn
 
 from WatChMaL.watchmal.engine.engine_classifier import ClassifierEngine
+from WatChMaL.analysis.plot_utils import disp_learn_hist, disp_learn_hist_smoothed, compute_roc, plot_roc
 
 
 from runner_util import utils, train_config
@@ -93,8 +95,16 @@ def main():
         settings = utils()
 
     elif args.doQuickPlots:
-        fig = disp_learn_hist(args.plotInput, losslim=2, show=False)
-        fig.savefig(args.plotOutput+'resnet_test.png', format='png')
+        fig = disp_learn_hist_smoothed(args.plotInput, losslim=2, show=False)
+        fig.savefig(args.plotOutput+'log_test.png', format='png')
+
+        softmax = np.load(args.plotInput+'/softmax.npy')
+        labels = np.load(args.plotInput+'/labels.npy')
+        fpr, tpr, thr = compute_roc(softmax, labels, 1, 0)
+        plot_tuple = plot_roc(fpr,tpr,thr,'Electron', 'Muon', fig_list=[0,1,2], plot_label='ResNet')
+        for i, plot in enumerate(plot_tuple):
+            plot.savefig(args.plotOutput+'roc'+str(i)+'.png', format='png')
+
 
 if __name__ == '__main__':
     # pylint: disable=no-value-for-parameter
