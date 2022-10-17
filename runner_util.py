@@ -3,6 +3,8 @@ import random
 import pickle
 import os
 
+from datetime import datetime
+
 import h5py
 import numpy as np
 
@@ -48,7 +50,9 @@ class utils():
             if 'InputPath'.lower() in key.lower():
                 self.inputPath = config[arch][key]
             elif 'OutputPath'.lower() in key.lower():
-                self.outputPath = config[arch][key]
+                now = datetime.now()
+                output_file = config[arch][key] + str(now) + '/'
+                self.outputPath = output_file
             elif 'NetworkArchitecture'.lower() in key.lower():
                 self.arch = config[arch][key]
             elif 'Classifier'.lower() in key.lower():
@@ -67,8 +71,10 @@ class utils():
                 else:
                     self.gpuNumber = config[arch].getint(key)
                     self.multiGPU = False
-            elif 'BatchSize'.lower() in key.lower():
-                self.batchsize = config[arch].getint(key)
+            elif 'TrainBatchSize'.lower() in key.lower():
+                self.TrainBatchSize = config[arch].getint(key)
+            elif 'ValBatchSize'.lower() in key.lower():
+                self.ValBatchSize = config[arch].getint(key)
             elif 'Optimizer'.lower() in key.lower():
                 self.optimizer = config[arch][key]
             elif 'NumClasses'.lower() in key.lower():
@@ -191,7 +197,8 @@ class utils():
             data_config['pmt_positions_file'] = self.pmtPositionsFile
         if 'PointNet'.lower() in self.arch.lower():
             data_config['use_time'] = self.useTime
-        data_loader = {"batch_size": self.batchsize, "num_workers":4}
+        train_data_loader = {"batch_size": self.TrainBatchSize, "num_workers":4}
+        val_data_loader = {"batch_size": self.ValBatchSize, "num_workers":4}
 
         #Set up indices of train/test/val datasets using TrainTestSplit and TestValSplit from configuration settings
         random.seed(a=self.seed)
@@ -223,7 +230,7 @@ class utils():
             print("Saving Test Rootfies...")
             np.save(self.outputPath + "test_rootfiles.npy", test_rootfiles)
         
-        return data_config, data_loader, train_indices, test_indices, val_indices
+        return data_config, train_data_loader, val_data_loader, train_indices, test_indices, val_indices
 
     def initTrainConfig(self):
         """Additional configuration for training settings
@@ -233,3 +240,6 @@ class utils():
     def initOptimizer(self):
         optimizer_dictionary = {"Adam".lower(): torch.optim.Adam}
         self.optimizer_engine = optimizer_dictionary[self.optimizer.lower()]
+
+    def getPlotInfo(self):
+        return self.outputPath, self.arch
