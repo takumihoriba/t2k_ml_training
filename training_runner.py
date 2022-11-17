@@ -50,7 +50,7 @@ def training_runner(rank, settings):
         world_size=world_size,
         rank=rank,
     )
-    #Initialize training configuration, classifier and dataset for engine training
+    #Initialize training configuration, classifier and dataset for engine training 
     settings.set_output_directory()
     settings.initTrainConfig()
     settings.initClassifier()
@@ -61,7 +61,7 @@ def training_runner(rank, settings):
     data_config, train_data_loader, val_data_loader, train_indices, test_indices, val_indices = settings.initDataset(rank)
     model = nn.parallel.DistributedDataParallel(settings.classification_engine, device_ids=[settings.gpuNumber])
     engine = ClassifierEngine(model, rank, settings.gpuNumber, settings.outputPath)
-
+       
     engine.configure_data_loaders(data_config, train_data_loader, val_data_loader, settings.multiGPU, 0, train_indices, test_indices, val_indices, settings)
     engine.configure_optimizers(settings)
     settings.save_options(settings.outputPath, 'training_settings')
@@ -69,7 +69,7 @@ def training_runner(rank, settings):
 
 def init_training():
 
-    #Choose settings for utils class in util_config.ini
+    # Choose settings for utils class in util_config.ini
     settings = utils()
     if settings==0:
         print("Settings did not initialize properly, exiting...")
@@ -92,7 +92,7 @@ def init_training():
 def main():
 
     if args.doTraining:
-        init_training()
+        init_training() 
         
     if args.testParser:
         settings = utils()
@@ -100,22 +100,21 @@ def main():
     if args.doQuickPlots:
         settings = utils()
         _, arch_name = settings.getPlotInfo()
-        run_directory = '/fast_scratch/jsholdice/OutputPath/'
-        newest_directory = max([os.path.join(run_directory,d) for d in os.listdir(run_directory)], key=os.path.getmtime)
-        run_name = 'Test'
-        run_result = WatChMaLClassification(newest_directory,run_name)
+        newest_directory = max([os.path.join(args.plotInput,d) for d in os.listdir(args.plotInput)], key=os.path.getmtime)
+        print(newest_directory)
+        run_result = WatChMaLClassification(newest_directory, str(arch_name))
         fig,ax1,ax2 = run_result.plot_training_progression()
         fig.tight_layout(pad=2.0) 
 
         plot_output = args.plotOutput + str(datetime.now()) + '/'
         os.mkdir(plot_output)
-        fig.savefig(plot_output+'log_test.png', format='png')
-        softmax = np.load(args.plotInput+'softmax.npy')
-        labels = np.load(args.plotInput+'labels.npy')
+        fig.savefig(plot_output + 'log_test.png', format='png')
+        softmax = np.load(newest_directory + '/softmax.npy')
+        labels = np.load(newest_directory + '/labels.npy')
         fpr, tpr, thr = compute_roc(softmax, labels, 1, 0)
         plot_tuple = plot_roc(fpr,tpr,thr,'Electron', 'Muon', fig_list=[0,1,2], plot_label=arch_name)
         for i, plot in enumerate(plot_tuple):
-            plot.savefig(plot_output+'roc'+str(i)+'.png', format='png')
+            plot.savefig(plot_output + 'roc' + str(i) + '.png', format='png')
 
 
 if __name__ == '__main__':

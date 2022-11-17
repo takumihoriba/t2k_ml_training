@@ -1,6 +1,6 @@
 --doTraining
 --doQuickPlots
---plotInput=/fast_scratch/jsholdice/resnet_emu_weightDecay_sep13_test_1/
+--plotInput=/fast_scratch/jsholdice/OutputPath/
 --plotOutput=/fast_scratch/jsholdice/output/
 --training_input=data/training_paths.txt
 --training_output_path=/fast_scratch/jsholdice/train_out/

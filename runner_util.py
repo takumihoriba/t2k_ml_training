@@ -206,6 +206,12 @@ class utils():
         length = len(h5py.File(self.inputPath.strip('\n'),mode='r')['event_hits_index'])
         unique_root_files, unique_inverse, unique_counts = np.unique(h5py.File(self.inputPath.strip('\n'),mode='r')['root_files'], return_inverse=True, return_counts=True)
 
+        # Test to read .hy file keys 
+        with h5py.File(self.inputPath, "r") as f:
+            #print("Keys: %s" % f.keys())
+            a_group_key = list(f.keys())[0]
+            #print(type(f[a_group_key]))
+
         #Based on root files, divide indices into train/val/test
         length_rootfiles = len(unique_root_files)
         train_rootfile_indices = random.sample(range(length_rootfiles), int(self.trainTestSplit*len(list(range(length_rootfiles)))))
