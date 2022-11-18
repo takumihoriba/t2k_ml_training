@@ -13,11 +13,12 @@ from WatChMaL.watchmal.engine.engine_classifier import ClassifierEngine
 from WatChMaL.analysis.plot_utils import disp_learn_hist, disp_learn_hist_smoothed, compute_roc, plot_roc
 
 
-from runner_util import utils, train_config
+from runner_util import utils, train_config, make_split_file
 
 parser = argparse.ArgumentParser(fromfile_prefix_chars='@')
 parser.add_argument("--doTraining", help="run training", action="store_true")
-parser.add_argument("--doQuickPlots", help="run training", action="store_true")
+parser.add_argument("--doQuickPlots", help="Make performance plots", action="store_true")
+parser.add_argument("--doIndices", help="create train/val/test indices file", action="store_true")
 parser.add_argument("--testParser", help="run training", action="store_true")
 parser.add_argument("--plotInput", help="run training")
 parser.add_argument("--plotOutput", help="run training")
@@ -88,6 +89,11 @@ def init_training():
         training_runner(0, settings)
     
 def main():
+
+    if args.doIndices:
+        make_split_file('/fast_scratch/fcormier/t2k/ml/wcsim/nov18_emu_fullCylinder_500k_1/combine_combine.hy',
+                            train_val_test_split=[0.70,0.15], output_path='/fast_scratch/fcormier/t2k/ml/wcsim/nov18_emu_fullCylinder_500k_1/')
+
     if args.doTraining:
         init_training()
 
