@@ -155,6 +155,7 @@ def plot_efficiency_profile(runs, binning, selection=None, select_labels=None, a
     fig: matplotlib.figure.Figure
     ax: matplotlib.axes.Axes
     """
+
     if ax is None:
         fig, ax = plt.subplots(figsize=fig_size)
     else:
@@ -227,7 +228,7 @@ class ClassificationRun(ABC):
             s[selection] = True
             selection = s & np.isin(self.true_labels, np.atleast_1d(select_labels))
         return selection
-
+ 
     def cut_with_constant_binned_efficiency(self, signal_labels, background_labels, efficiency, binning, selection=None,
                                             select_labels=None, return_thresholds=False):
         """
@@ -238,7 +239,7 @@ class ClassificationRun(ABC):
         These cut thresholds are then used to apply the cut to all events (not just those selected by `selection`) and
         an array of booleans is returned for whether each discriminator value is above the threshold of its
         corresponding bin. The cut result is also stored for use in plotting efficiency profiles.
-
+ 
         Parameters
         ----------
         signal_labels: int or sequence of ints

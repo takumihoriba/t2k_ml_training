@@ -5,7 +5,7 @@ import numpy as np
 from analysis.utils.math import binomial_error
 
 
-def get_binning(x, bins=None, minimum=None, maximum=None, width=None):
+def get_binning(x, bins=200, minimum=None, maximum=None, width=None):
     """
     Finds the indices of the bins to which each value in input array belongs, for a set of bins specified either as an
     array of bin edges, number of bins or bin width

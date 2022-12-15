@@ -1,9 +1,9 @@
-import uproot
+#import uproot
 import glob
 import numpy as np
 from abc import ABC, abstractmethod, ABCMeta
 from os.path import dirname
-from omegaconf import OmegaConf
+#from omegaconf import OmegaConf
 from matplotlib import pyplot as plt
 
 
@@ -132,7 +132,7 @@ class WatChMaLOutput(ABC, metaclass=ABCMeta):
             Two dimensional array of predicted softmax values, where each row corresponds to an event and each column
             contains the softmax values of a class.
         """
-        outputs = np.load(self.directory + name + ".npy")
+        outputs = np.load(self.directory +"/"+ name + ".npy")
         output_indices = np.load(self.directory + "/indices.npy")
         if self.indices is None:
             return outputs[output_indices.argsort()].squeeze()

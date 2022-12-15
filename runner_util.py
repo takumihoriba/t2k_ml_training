@@ -162,13 +162,13 @@ class utils():
             min_label = np.amin(h5fw['labels'])
             self.minLabel = min_label
 
-    def initClassifier(self):
+    def initClassifier(self, kernel_size, stride):
         """Initializes the classifier and regression to be used in the main classification engine
         """
         #make a dictionary to avoid ugly array of if statements. Add lambda so that functions only get used if called in classification_engine below
         #use lower() to ignore any mistakes in capital letter in config file
         classifier_dictionary = {'PassThrough'.lower(): lambda : PassThrough(), 'PointNetFullyConnected'.lower(): lambda : PointNetFullyConnected(num_inputs=256, num_classes=self.numClasses)}
-        regression_dictionary = {'resnet18'.lower(): lambda : resnet18(num_input_channels=1+int(self.useTime), num_output_channels=self.numClasses), 'PointNetFeat'.lower(): lambda : PointNetFeat(k=4+int(self.useTime))}
+        regression_dictionary = {'resnet18'.lower(): lambda : resnet18(num_input_channels=1+int(self.useTime), num_output_channels=self.numClasses, conv1_kernel = kernel_size, conv1_stride = stride), 'PointNetFeat'.lower(): lambda : PointNetFeat(k=4+int(self.useTime))}
 
         #Make sure to call () after every function because they are defined as lambdas in dictionary
         self.classification_engine = Classifier(regression_dictionary[self.featureExtractor.lower()](), classifier_dictionary[self.classifier.lower()](), self.numClasses) 
@@ -205,12 +205,6 @@ class utils():
 
         length = len(h5py.File(self.inputPath.strip('\n'),mode='r')['event_hits_index'])
         unique_root_files, unique_inverse, unique_counts = np.unique(h5py.File(self.inputPath.strip('\n'),mode='r')['root_files'], return_inverse=True, return_counts=True)
-
-        # Test to read .hy file keys 
-        with h5py.File(self.inputPath, "r") as f:
-            #print("Keys: %s" % f.keys())
-            a_group_key = list(f.keys())[0]
-            #print(type(f[a_group_key]))
 
         #Based on root files, divide indices into train/val/test
         length_rootfiles = len(unique_root_files)

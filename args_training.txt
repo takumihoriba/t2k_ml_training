@@ -1,4 +1,3 @@
---doTraining
 --doQuickPlots
 --plotInput=/fast_scratch/jsholdice/OutputPath/
 --plotOutput=/fast_scratch/jsholdice/output/
