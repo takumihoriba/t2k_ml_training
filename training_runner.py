@@ -4,7 +4,7 @@ import argparse
 import debugpy
 import h5py
 import logging
-import os
+import os  
 import csv
 import numpy as np
 from datetime import datetime
@@ -37,7 +37,7 @@ logger = logging.getLogger('train')
 
 
 def training_runner(rank, settings, kernel_size, stride):
-    
+
     print(f"rank: {rank}")
     #gpu = settings.gpuNumber[rank]
     world_size=1
@@ -84,19 +84,19 @@ def init_training(settings, kernel_size, stride):
 
     if settings.multiGPU:
         master_port += settings.gpuNumber[0]
-        mp.spawn(training_runner, nprocs=len(settings.gpuNumber), args=(settings,kernel_size,))
+        mp.spawn(training_runner, nprocs=len(settings.gpuNumber), args=(settings,kernel_size,stride,))
     else:
         training_runner(0, settings, kernel_size, stride)
 
 def efficiency_plots(settings, arch_name, newest_directory, plot_output):
-    
+
     # retrieve test indices
     idx = np.array(sorted(np.load(str(newest_directory) + "/indices.npy")))
-      
+
     # grab relevent parameters from hy file and only keep the values corresponding to those in the test set
     hy = h5py.File(settings.inputPath, "r")
     print(list(hy.keys()))
-    angles = np.array(hy['angles'])[idx].squeeze()
+    angles = np.array(hy['angles'])[idx].squeeze() 
     labels = np.array(hy['labels'])[idx].squeeze() 
     veto = np.array(hy['veto'])[idx].squeeze()
     energies = np.array(hy['energies'])[idx].squeeze()
@@ -112,7 +112,7 @@ def efficiency_plots(settings, arch_name, newest_directory, plot_output):
     dwall = math.dwall(positions, tank_axis = 2)
     momentum = math.momentum_from_energy(energies, labels)
 
-    # apply cuts, as of right now it should remove any events
+    # apply cuts, as of right now it should remove any events with zero pmt hits (no veto cut)
     nhit_cut = nhits > 0 #25
     # veto_cut = (veto == 0)
     hy_electrons = (labels == 1)
@@ -123,7 +123,7 @@ def efficiency_plots(settings, arch_name, newest_directory, plot_output):
     e_label = [0]
     mu_label = [1]
     labels = [x - 1 for x in labels]
-        
+
     # get the bin indices and edges for parameters
     polar_binning = get_binning(np.cos(angles[:,0]), 10, -1, 1)
     az_binning = get_binning(angles[:,1]*180/np.pi, 10, -180, 180)
@@ -132,21 +132,16 @@ def efficiency_plots(settings, arch_name, newest_directory, plot_output):
     towall_binning = get_binning(towall, 10)
 
     # create watchmal classification object to be used as runs for plotting the efficiency relative to event angle  
-    #run = WatChMaLClassification(newest_directory, str(arch_name), labels, idx, basic_cuts, color="blue", linestyle='-')
-    '''
-    conv1x1 = '/fast_scratch/jsholdice/OutputPath/conv1x1'
-    conv3x3 = '/fast_scratch/jsholdice/OutputPath/conv3x3'
-    conv5x5 = '/fast_scratch/jsholdice/OutputPath/conv5x5'
-    conv7x7 = '/fast_scratch/jsholdice/OutputPath/conv7x7'
-    conv9x9 = '/fast_scratch/jsholdice/OutputPath/conv9x9'
-    run_result = [WatChMaLClassification(conv1x1, 'Conv1x1', labels, idx, basic_cuts, color="blue", linestyle='-'),
-                  WatChMaLClassification(conv3x3, 'Conv3x3', labels, idx, basic_cuts, color="red", linestyle='-'),
-                  WatChMaLClassification(conv5x5, 'Conv5x5', labels, idx, basic_cuts, color="green", linestyle='-'),
-                  WatChMaLClassification(conv7x7, 'Conv7x7', labels, idx, basic_cuts, color="black", linestyle='-'),
-                  WatChMaLClassification(conv9x9, 'Conv9x9', labels, idx, basic_cuts, color="purple", linestyle='-'),]
-    '''
-    run = WatChMaLClassification(newest_directory, 'Conv1x1', labels, idx, basic_cuts, color="blue", linestyle='-')
-    run_result = [run]
+    stride1 = '/fast_scratch/jsholdice/OutputPath/stride1'
+    stride3 = '/fast_scratch/jsholdice/OutputPath/stride3'
+    stride5 = '/fast_scratch/jsholdice/OutputPath/stride5'
+    run_result = [WatChMaLClassification(stride1, 'stride1', labels, idx, basic_cuts, color="blue", linestyle='-'),
+                  WatChMaLClassification(stride3, 'stride3', labels, idx, basic_cuts, color="green", linestyle='-'),
+                  WatChMaLClassification(stride5, 'stride5', labels, idx, basic_cuts, color="black", linestyle='-')]
+    
+    # for single runs and then can plot the ROC curves with it 
+    #run = [WatChMaLClassification(newest_directory, 'title', labels, idx, basic_cuts, color="blue", linestyle='-')]
+
     # calculate the thresholds that reject 99.9% of muons and apply cut to all events
     muon_rejection = 0.999
     muon_efficiency = 1 - muon_rejection
@@ -173,19 +168,22 @@ def efficiency_plots(settings, arch_name, newest_directory, plot_output):
     e_mom_fig.savefig(plot_output + 'e_momentum_efficiency.png', format='png')
     e_dwall_fig.savefig(plot_output + 'e_dwall_efficiency.png', format='png')
     e_towall_fig.savefig(plot_output + 'e_towall_efficiency.png', format='png')
-        
+
     mu_polar_fig.savefig(plot_output + 'mu_polar_efficiency.png', format='png')
     mu_az_fig.savefig(plot_output + 'mu_azimuthal_efficiency.png', format='png')
     mu_mom_fig.savefig(plot_output + 'mu_momentum_efficiency.png', format='png')
     mu_dwall_fig.savefig(plot_output + 'mu_dwall_efficiency.png', format='png')
     mu_towall_fig.savefig(plot_output + 'mu_towall_efficiency.png', format='png')
 
-    return run
+    # remove comment for ROC curves of single run 
+    #return run
 
 
-def main(kernel_size, stride):
+def main():
     settings = utils()
-    
+    kernel_size = settings.kernel
+    stride = settings.stride
+
     if args.doTraining:
         init_training(settings, kernel_size, stride) 
         
@@ -203,27 +201,10 @@ def main(kernel_size, stride):
 
         # generate and save signal and background efficiency plots 
         #run = efficiency_plots(settings, arch_name, newest_directory, plot_output)
-        run = efficiency_plots(settings, arch_name, newest_directory, plot_output)
-
+        efficiency_plots(settings, arch_name, newest_directory, plot_output)
+        
+        
         '''
-        # Organizes data for csv file 
-        input_header = ["INPUT HYPERPARAMETERS"]
-        hyper_parameters = [['Network: '+str(settings.arch)], ['Train Batch Size: '+str(settings.TrainBatchSize)], ['Val Batch Size: '+str(settings.ValBatchSize)], 
-                            ['Optimizer: '+ str(settings.optimizer)], ['Epochs: '+str(settings.epochs)], ['Restore Best State: '+str(settings.restoreBestState)],
-                            ['Learning Rate: '+str(settings.lr)], ['Weight Decay: '+str(settings.weightDecay)]]
-        output_header = ["OUTPUT RESULTS"]
-        output_results = [['Avg Eval Accuracy: '+str(self.avg_eval_acc)], ['Avg Eval Loss: '+str(self.avg_eval_loss)]]
-
-        # Writes csv file 
-        with open (str(newest_directory) + 'Inputs_Outputs.csv', 'w', encoding='UTF8', newline='') as f:
-            writer = csv.writer(f)
-            writer.writerow(input_header)
-            writer.writerows(hyper_parameters)
-            writer.writerow([])
-            writer.writerow(output_header)
-            writer.writerows(output_results)
-        '''
-
         # plot training progression of training displaying the loss and accuracy throughout training and validation
         fig,ax1,ax2 = run.plot_training_progression()
         fig.tight_layout(pad=2.0) 
@@ -236,13 +217,12 @@ def main(kernel_size, stride):
         plot_tuple = plot_roc(fpr,tpr,thr,'Electron', 'Muon', fig_list=[0,1,2], plot_label=arch_name)
         for i, plot in enumerate(plot_tuple):
             plot.savefig(plot_output + 'roc' + str(i) + '.png', format='png')
+        '''
 
 if __name__ == '__main__':
     # pylint: disable=no-value-for-parameter
-    kernel_size = 1
-    stride = 1
     print("MAIN")
-    main(kernel_size, stride)
+    main()
 
 
 '''

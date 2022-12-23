@@ -81,6 +81,10 @@ class utils():
                 self.numClasses = config[arch].getint(key)
             elif 'Epochs'.lower() in key.lower():
                 self.epochs = config[arch].getint(key)
+            elif 'KernelSize'.lower() in key.lower():
+                self.kernel = config[arch].getint(key)
+            elif 'Stride'.lower() in key.lower():
+                self.stride = config[arch].getint(key)
             elif 'ReportInterval'.lower() in key.lower():
                 self.reportInterval = config[arch].getint(key)
             elif 'ValInterval'.lower() in key.lower():
