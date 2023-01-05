@@ -3,6 +3,8 @@ import random
 import pickle
 import os
 
+from datetime import datetime
+
 import h5py
 import numpy as np
 
@@ -72,7 +74,9 @@ class utils():
             if 'InputPath'.lower() in key.lower():
                 self.inputPath = config[arch][key]
             elif 'OutputPath'.lower() in key.lower():
-                self.outputPath = config[arch][key]
+                now = datetime.now()
+                output_file = config[arch][key] + str(now) + '/'
+                self.outputPath = output_file
             elif 'NetworkArchitecture'.lower() in key.lower():
                 self.arch = config[arch][key]
             elif 'Classifier'.lower() in key.lower():
@@ -91,14 +95,20 @@ class utils():
                 else:
                     self.gpuNumber = config[arch].getint(key)
                     self.multiGPU = False
-            elif 'BatchSize'.lower() in key.lower():
-                self.batchsize = config[arch].getint(key)
+            elif 'TrainBatchSize'.lower() in key.lower():
+                self.TrainBatchSize = config[arch].getint(key)
+            elif 'ValBatchSize'.lower() in key.lower():
+                self.ValBatchSize = config[arch].getint(key)
             elif 'Optimizer'.lower() in key.lower():
                 self.optimizer = config[arch][key]
             elif 'NumClasses'.lower() in key.lower():
                 self.numClasses = config[arch].getint(key)
             elif 'Epochs'.lower() in key.lower():
                 self.epochs = config[arch].getint(key)
+            elif 'KernelSize'.lower() in key.lower():
+                self.kernel = config[arch].getint(key)
+            elif 'Stride'.lower() in key.lower():
+                self.stride = config[arch].getint(key)
             elif 'ReportInterval'.lower() in key.lower():
                 self.reportInterval = config[arch].getint(key)
             elif 'ValInterval'.lower() in key.lower():
@@ -180,13 +190,13 @@ class utils():
             min_label = np.amin(h5fw['labels'])
             self.minLabel = min_label
 
-    def initClassifier(self):
+    def initClassifier(self, kernel_size, stride):
         """Initializes the classifier and regression to be used in the main classification engine
         """
         #make a dictionary to avoid ugly array of if statements. Add lambda so that functions only get used if called in classification_engine below
         #use lower() to ignore any mistakes in capital letter in config file
         classifier_dictionary = {'PassThrough'.lower(): lambda : PassThrough(), 'PointNetFullyConnected'.lower(): lambda : PointNetFullyConnected(num_inputs=256, num_classes=self.numClasses)}
-        regression_dictionary = {'resnet18'.lower(): lambda : resnet18(num_input_channels=1+int(self.useTime), num_output_channels=self.numClasses), 'PointNetFeat'.lower(): lambda : PointNetFeat(k=4+int(self.useTime))}
+        regression_dictionary = {'resnet18'.lower(): lambda : resnet18(num_input_channels=1+int(self.useTime), num_output_channels=self.numClasses, conv1_kernel = kernel_size, conv1_stride = stride), 'PointNetFeat'.lower(): lambda : PointNetFeat(k=4+int(self.useTime))}
 
         #Make sure to call () after every function because they are defined as lambdas in dictionary
         self.classification_engine = Classifier(regression_dictionary[self.featureExtractor.lower()](), classifier_dictionary[self.classifier.lower()](), self.numClasses) 
@@ -215,7 +225,8 @@ class utils():
             data_config['pmt_positions_file'] = self.pmtPositionsFile
         if 'PointNet'.lower() in self.arch.lower():
             data_config['use_time'] = self.useTime
-        data_loader = {"batch_size": self.batchsize, "num_workers":4}
+        train_data_loader = {"batch_size": self.TrainBatchSize, "num_workers":4}
+        val_data_loader = {"batch_size": self.ValBatchSize, "num_workers":4}
 
         #Set up indices of train/test/val datasets using TrainTestSplit and TestValSplit from configuration settings
         random.seed(a=self.seed)
@@ -247,7 +258,7 @@ class utils():
             print("Saving Test Rootfies...")
             np.save(self.outputPath + "test_rootfiles.npy", test_rootfiles)
         
-        return data_config, data_loader, train_indices, test_indices, val_indices
+        return data_config, train_data_loader, val_data_loader, train_indices, test_indices, val_indices
 
     def initTrainConfig(self):
         """Additional configuration for training settings
@@ -257,3 +268,6 @@ class utils():
     def initOptimizer(self):
         optimizer_dictionary = {"Adam".lower(): torch.optim.Adam}
         self.optimizer_engine = optimizer_dictionary[self.optimizer.lower()]
+
+    def getPlotInfo(self):
+        return self.outputPath, self.arch
