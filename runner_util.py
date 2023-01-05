@@ -11,10 +11,34 @@ import numpy as np
 from WatChMaL.watchmal.model.classifier import Classifier, PassThrough, PointNetFullyConnected, ResNetFullyConnected
 from WatChMaL.watchmal.model.pointnet import PointNetFeat
 from WatChMaL.watchmal.model.resnet import resnet18
-from WatChMaL.watchmal.dataset.t2k.t2k_dataset import PointNetT2KDataset, T2KCNNDataset
+#from WatChMaL.watchmal.dataset.t2k.t2k_dataset import PointNetT2KDataset, T2KCNNDataset
 
 import torch
 from torch.utils.data.sampler import SubsetRandomSampler
+
+def make_split_file(h5_file,train_val_test_split=[0.70,0.15], output_path='data/', seed=0):
+        random.seed(seed)
+
+        length = len(h5py.File(h5_file,mode='r')['event_hits_index'])
+        unique_root_files, unique_inverse, unique_counts = np.unique(h5py.File(h5_file,mode='r')['root_files'], return_inverse=True, return_counts=True)
+
+        #Based on root files, divide indices into train/val/test
+        length_rootfiles = len(unique_root_files)
+        train_rootfile_indices = random.sample(range(length_rootfiles), int(train_val_test_split[0]*len(list(range(length_rootfiles)))))
+        train_indices = np.isin(unique_inverse, train_rootfile_indices)
+        train_indices = np.array(range(length), dtype='int64')[train_indices]
+        train_rootfiles_set = set(train_rootfile_indices)
+        index_rootfiles_set = set(range(length_rootfiles))
+        other_rootfiles_indices = list(index_rootfiles_set - train_rootfiles_set)
+        test_rootfile_indices = other_rootfiles_indices[0:int(train_val_test_split[1]*len(other_rootfiles_indices))]
+        val_rootfile_indices = other_rootfiles_indices[int(train_val_test_split[1]*len(other_rootfiles_indices)):len(other_rootfiles_indices)] 
+        test_indices = np.isin(unique_inverse, test_rootfile_indices)
+        test_indices = np.array(range(length), dtype='int64')[test_indices]
+        val_indices = np.isin(unique_inverse, val_rootfile_indices)
+        val_indices = np.array(range(length), dtype='int64')[val_indices]
+
+        np.savez(output_path + 'train'+str(train_val_test_split[0])+'_val'+str(train_val_test_split[1])+'_test'+str(1-train_val_test_split[0]-train_val_test_split[1])+'.npz',
+                    test_idxs=test_indices, val_idxs=val_indices, train_idxs=train_indices)
 
 
 class train_config():
@@ -101,7 +125,7 @@ class utils():
             elif 'UseTime'.lower() in key.lower():
                 self.useTime = config[arch].getboolean(key)
             elif 'TrainTestSplit'.lower() in key.lower():
-                self.trainTestSplit = config[arch].getfloat(key)
+                train_val_test_split[0] = config[arch].getfloat(key)
             elif 'TestValSplit'.lower() in key.lower():
                 self.testValSplit = config[arch].getfloat(key)
             elif 'DataModel'.lower() in key.lower():
@@ -212,7 +236,7 @@ class utils():
 
         #Based on root files, divide indices into train/val/test
         length_rootfiles = len(unique_root_files)
-        train_rootfile_indices = random.sample(range(length_rootfiles), int(self.trainTestSplit*len(list(range(length_rootfiles)))))
+        train_rootfile_indices = random.sample(range(length_rootfiles), int(train_val_test_split[0]*len(list(range(length_rootfiles)))))
         train_indices = np.isin(unique_inverse, train_rootfile_indices)
         train_indices = np.array(range(length))[train_indices]
         train_rootfiles_set = set(train_rootfile_indices)
