@@ -8,6 +8,8 @@ from datetime import datetime
 import h5py
 import numpy as np
 
+from sklearn.model_selection import KFold, train_test_split
+
 from WatChMaL.watchmal.model.classifier import Classifier, PassThrough, PointNetFullyConnected, ResNetFullyConnected
 from WatChMaL.watchmal.model.pointnet import PointNetFeat
 from WatChMaL.watchmal.model.resnet import resnet18
@@ -16,17 +18,34 @@ from WatChMaL.watchmal.model.resnet import resnet18
 import torch
 from torch.utils.data.sampler import SubsetRandomSampler
 
-def make_split_file(h5_file,train_val_test_split=[0.70,0.15], output_path='data/', seed=0):
+def make_split_file(h5_file,train_val_test_split=[0.70,0.15], output_path='data/', seed=0, nfolds=3):
+    """Outputs indices to split h5 files into train/test/val 
+
+    Args:
+        h5_file (_type_): path+name of h5 file (combination of many root files)
+        train_val_test_split (list, optional): Train and Val split. Test is assumed as 1-train-val. Defaults to [0.70,0.15]. Only used if nfolds is 1
+        output_path (str, optional): where to store the index file. Defaults to 'data/'.
+        seed (int, optional): Seed. Leave at 0 unless you know what you're doing. Defaults to 0.
+        nfolds (int, optional): Number of folds. Makes it so that you can make different folds for n fold validation. Defaults to 1.
+    """
+    #Check if you can actually do the number of folds requested
+    if (1.0-train_val_test_split[0]-train_val_test_split[1])*nfolds > 1:
+        print(f"ERROR: {nfolds} folds is too many for the test proportion ({(1.0-train_val_test_split[0]-train_val_test_split[1])}) requested ")
+        return 0
+
+    length = len(h5py.File(h5_file,mode='r')['event_hits_index'])
+    unique_root_files, unique_inverse, unique_counts = np.unique(h5py.File(h5_file,mode='r')['root_files'], return_inverse=True, return_counts=True)
+
+    #Based on root files, divide indices into train/val/test
+    length_rootfiles = len(unique_root_files)
+
+    if nfolds==1:
         random.seed(seed)
 
-        length = len(h5py.File(h5_file,mode='r')['event_hits_index'])
-        unique_root_files, unique_inverse, unique_counts = np.unique(h5py.File(h5_file,mode='r')['root_files'], return_inverse=True, return_counts=True)
-
-        #Based on root files, divide indices into train/val/test
-        length_rootfiles = len(unique_root_files)
         train_rootfile_indices = random.sample(range(length_rootfiles), int(train_val_test_split[0]*len(list(range(length_rootfiles)))))
         train_indices = np.isin(unique_inverse, train_rootfile_indices)
         train_indices = np.array(range(length), dtype='int64')[train_indices]
+        print(train_indices)
         train_rootfiles_set = set(train_rootfile_indices)
         index_rootfiles_set = set(range(length_rootfiles))
         other_rootfiles_indices = list(index_rootfiles_set - train_rootfiles_set)
@@ -39,16 +58,32 @@ def make_split_file(h5_file,train_val_test_split=[0.70,0.15], output_path='data/
 
         np.savez(output_path + 'train'+str(train_val_test_split[0])+'_val'+str(train_val_test_split[1])+'_test'+str(1-train_val_test_split[0]-train_val_test_split[1])+'.npz',
                     test_idxs=test_indices, val_idxs=val_indices, train_idxs=train_indices)
+    else:
+        kf = KFold(n_splits=nfolds, shuffle=True, random_state=seed)
+        for i, (train_rootfile_indices, test_index) in enumerate(kf.split(range(length_rootfiles))):
+            split = train_test_split(test_index, train_size=0.5, shuffle=True, random_state=seed)
+            val_rootfile_indices = split[0]
+            test_rootfile_indices = split[1]
+            train_indices = np.isin(unique_inverse, train_rootfile_indices)
+            train_indices = np.array(range(length), dtype='int64')[train_indices]
+            print(train_indices)
+            test_indices = np.isin(unique_inverse, test_rootfile_indices)
+            test_indices = np.array(range(length), dtype='int64')[test_indices]
+            val_indices = np.isin(unique_inverse, val_rootfile_indices)
+            val_indices = np.array(range(length), dtype='int64')[val_indices]
+            print(f"Fold {i}")
+            np.savez(output_path + 'train_val_test_nFolds'+str(nfolds)+'_fold'+str(i)+'.npz',
+                    test_idxs=test_indices, val_idxs=val_indices, train_idxs=train_indices)
 
 
 class train_config():
     def __init__(self,epochs, report_interval, val_interval, num_val_batches, checkpointing, save_interval) -> None:
-            self.epochs=epochs
-            self.report_interval=report_interval
-            self.val_interval = val_interval
-            self.num_val_batches = num_val_batches
-            self.checkpointing = checkpointing
-            self.save_interval = save_interval
+        self.epochs=epochs
+        self.report_interval=report_interval
+        self.val_interval = val_interval
+        self.num_val_batches = num_val_batches
+        self.checkpointing = checkpointing
+        self.save_interval = save_interval
 
 class utils():
     """Utility class to read in config file, prepare WatChMaL training

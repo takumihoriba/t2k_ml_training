@@ -14,19 +14,12 @@ import torch.multiprocessing as mp
 import torch.nn as nn
 
 from WatChMaL.watchmal.engine.engine_classifier import ClassifierEngine
-<<<<<<< HEAD
-from WatChMaL.analysis.plot_utils import disp_learn_hist, disp_learn_hist_smoothed, compute_roc, plot_roc
-
-
-from runner_util import utils, train_config, make_split_file
-=======
 from analysis.classification import WatChMaLClassification
 from analysis.classification import plot_efficiency_profile
 from analysis.utils.plotting import plot_legend
 import analysis.utils.math as math
-from runner_util import utils, train_config
+from runner_util import utils, train_config, make_split_file
 from analysis.utils.binning import get_binning
->>>>>>> 41e9feb16a3296f75449203de0a5960316b53a73
 
 parser = argparse.ArgumentParser(fromfile_prefix_chars='@')
 parser.add_argument("--doTraining", help="run training", action="store_true")
@@ -188,19 +181,14 @@ def efficiency_plots(settings, arch_name, newest_directory, plot_output):
 
 
 def main():
-<<<<<<< HEAD
 
     if args.doIndices:
-        make_split_file('/fast_scratch/fcormier/t2k/ml/wcsim/nov18_emu_fullCylinder_500k_1/combine_combine.hy',
-                            train_val_test_split=[0.70,0.15], output_path='/fast_scratch/fcormier/t2k/ml/wcsim/nov18_emu_fullCylinder_500k_1/')
+        make_split_file('/fast_scratch/WatChMaL/data/T2K/nov18_emu_fullCylinder_500k_1/combine_combine.hy',
+                            train_val_test_split=[0.70,0.15], output_path='/fast_scratch/fcormier/t2k/ml/wcsim/jan5_emu_fullCylinder_500k_1/')
 
-    if args.doTraining:
-        init_training()
-=======
-    settings = utils()
-    kernel_size = settings.kernel
-    stride = settings.stride
->>>>>>> 41e9feb16a3296f75449203de0a5960316b53a73
+    #settings = utils()
+    #kernel_size = settings.kernel
+    #stride = settings.stride
 
     if args.doTraining:
         init_training(settings, kernel_size, stride) 
