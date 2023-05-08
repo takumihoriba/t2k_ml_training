@@ -39,6 +39,9 @@ parser.add_argument("--doIndices", help="create train/val/test indices file", ac
 parser.add_argument("--testParser", help="run training", action="store_true")
 parser.add_argument("--plotInput", help="run training")
 parser.add_argument("--comparisonFolder", help="run training")
+parser.add_argument("--numFolds", help="run training")
+parser.add_argument("--indicesInput", help="run training")
+parser.add_argument("--indicesOutputPath", help="run training")
 parser.add_argument("--plotOutput", help="run training")
 parser.add_argument("--training_input", help="where training files are")
 parser.add_argument("--training_output_path", help="where to dump training output")
@@ -46,6 +49,9 @@ args = parser.parse_args(['--training_input','foo','@args_training.txt',
                             '--plotInput','foo','@args_training.txt',
                             '--comparisonFolder','foo','@args_training.txt',
                             '--plotOutput','foo','@args_training.txt',
+                            '--indicesInput','foo','@args_training.txt',
+                            '--indicesOutputPath','foo','@args_training.txt',
+                            '--numFolds','foo','@args_training.txt',
                             '--training_output_path','foo','@args_training.txt'])
 logger = logging.getLogger('train')
 
@@ -86,6 +92,8 @@ def training_runner(rank, settings, kernel_size, stride):
     engine.train(settings)
 
 def init_training():
+    """Reads util_config.ini, constructs command to run 1 training
+    """
 
     settings = utils()
     settings.set_output_directory()
@@ -159,8 +167,7 @@ if args.doComparison:
     compare_outputs(args.comparisonFolder)
 
 if args.doIndices:
-    make_split_file('/fast_scratch/fcormier/t2k/ml/wcsim/jan16_emu_fullCylinder_1M_1/combine_combine.hy',
-                        train_val_test_split=[0.70,0.15], output_path='/fast_scratch/fcormier/t2k/ml/wcsim/jan16_emu_fullCylinder_1M_1/', nfolds=3)
+    make_split_file(args.inputIndices, train_val_test_split=[0.70,0.15], output_path=args.outputIndicesPath, nfolds=args.numFolds)
 
 #settings = utils()
 #kernel_size = settings.kernel

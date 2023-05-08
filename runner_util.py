@@ -26,7 +26,7 @@ def make_split_file(h5_file,train_val_test_split=[0.70,0.15], output_path='data/
         train_val_test_split (list, optional): Train and Val split. Test is assumed as 1-train-val. Defaults to [0.70,0.15]. Only used if nfolds is 1
         output_path (str, optional): where to store the index file. Defaults to 'data/'.
         seed (int, optional): Seed. Leave at 0 unless you know what you're doing. Defaults to 0.
-        nfolds (int, optional): Number of folds. Makes it so that you can make different folds for n fold validation. Defaults to 1.
+        nfolds (int, optional): Number of folds. Makes it so that you can make different folds for n fold validation. Defaults to 3.
     """
     #Check if you can actually do the number of folds requested
     if (1.0-train_val_test_split[0]-train_val_test_split[1])*nfolds > 1:

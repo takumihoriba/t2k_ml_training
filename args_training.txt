@@ -1,4 +1,7 @@
---doComparison
+--doIndices
+--numFolds=1
+--indicesInput=/fast_scratch/fcormier/t2k/ml/wcsim/jan16_emu_fullCylinder_1M_1/combine_combine.hy
+--indicesOutputPath=/fast_scratch/fcormier/t2k/ml/wcsim/jan16_emu_fullCylinder_1M_1/
 --comparisonFolder=/fast_scratch/fcormier/t2k/ml/training/resnet_feb3_resnet_test_epoch20_1/
 --plotInput=/fast_scratch/fcormier/t2k/ml/training/resnet_emu_weightDecay_sep13_test_1/
 --plotOutput=output/resnet_emu_weightDecay_sep13_test_1/
