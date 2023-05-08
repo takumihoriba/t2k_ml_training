@@ -116,7 +116,7 @@ def plot_rocs(runs, signal_labels, background_labels, selection=None, ax=None, f
 
 
 def plot_efficiency_profile(runs, binning, selection=None, select_labels=None, ax=None, fig_size=None, x_label="",
-                            y_label="", legend='best', y_lim=None, **plot_args):
+                            y_label="", legend='best', y_lim=None, label=None, **plot_args):
     """
     Plot binned efficiencies for a cut applied to a number of classification runs.
     Each run should already have had a cut generated, then in each bin the proportion of events passing the cut is
@@ -423,7 +423,7 @@ class WatChMaLClassification(ClassificationRun, WatChMaLOutput):
                 self._val_log_epoch, self._val_log_loss, self._val_log_accuracy, self._val_log_best)
 
     def plot_training_progression(self, plot_best=True, y_acc_lim = (0.4, 1.0), y_loss_lim=None, fig_size=None, title1='Training Loss and Accuracy',
-                                  title2='Validation Loss and Accuracy', legend=None):
+                                  title2='Validation Loss and Accuracy', legend=None, doAccuracy=True):
         """
         Plot the progression of training and validation loss and accuracy from the run's logs
 
@@ -462,17 +462,18 @@ class WatChMaLClassification(ClassificationRun, WatChMaLOutput):
 
         """
         fig, ax1_1, ax2_1 = super().plot_training_progression(plot_best, y_loss_lim, fig_size, title1, title2, legend)
-        ax1_2 = ax1_1.twinx()
-        ax2_2 = ax2_1.twinx()
-        ax1_2.plot(self.train_log_epoch, self.train_log_accuracy, lw=2, label='Train accuracy', color='r', alpha=0.3)
-        ax2_2.plot(self.val_log_epoch, self.val_log_accuracy, lw=2, label='Validation accuracy', color='r')
-        if plot_best:
-            ax2_2.plot(self.val_log_epoch[self.val_log_best], self.val_log_accuracy[self.val_log_best], lw=0, marker='o',
-                     label='Best validation accuracy', color='darkred')
-        ax1_2.set_ylabel("Accuracy", c='r')
-        ax2_2.set_ylabel("Accuracy", c='r')
-        ax1_2.set_ylim(y_acc_lim)
-        ax2_2.set_ylim(y_acc_lim)
+        if doAccuracy:
+            ax1_2 = ax1_1.twinx()
+            ax2_2 = ax2_1.twinx()
+            ax1_2.plot(self.train_log_epoch, self.train_log_accuracy, lw=2, label='Train accuracy', color='r', alpha=0.3)
+            ax2_2.plot(self.val_log_epoch, self.val_log_accuracy, lw=2, label='Validation accuracy', color='r')
+            if plot_best:
+                ax2_2.plot(self.val_log_epoch[self.val_log_best], self.val_log_accuracy[self.val_log_best], lw=0, marker='o',
+                        label='Best validation accuracy', color='darkred')
+            ax1_2.set_ylabel("Accuracy", c='r')
+            ax2_2.set_ylabel("Accuracy", c='r')
+            ax1_2.set_ylim(y_acc_lim)
+            ax2_2.set_ylim(y_acc_lim)
         if legend:
             ax1_2.legend(*plot.combine_legends((ax1_2, ax2_2)), loc=7)
         return fig, ax1_2, ax2_2

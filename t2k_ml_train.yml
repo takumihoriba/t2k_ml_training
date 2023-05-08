@@ -1,4 +1,4 @@
-name: t2k_ml_train
+name: t2k_ml_train_2
 channels:
   - defaults
 dependencies:
