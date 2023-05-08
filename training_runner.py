@@ -1,4 +1,4 @@
-from WatChMaL.analysis.plot_utils import disp_learn_hist, disp_learn_hist_smoothed, compute_roc, plot_roc
+#from WatChMaL.analysis.plot_utils import disp_learn_hist, disp_learn_hist_smoothed, compute_roc, plot_roc
 
 import argparse
 import debugpy
@@ -8,6 +8,9 @@ import os
 import csv
 import numpy as np
 from datetime import datetime
+import itertools
+
+import subprocess
 
 import torch
 import torch.multiprocessing as mp
@@ -20,21 +23,32 @@ from analysis.utils.plotting import plot_legend
 import analysis.utils.math as math
 from runner_util import utils, train_config, make_split_file
 from analysis.utils.binning import get_binning
+from compare_outputs import compare_outputs
+
+from torchmetrics import AUROC, ROC
+
+from lxml import etree
+
+import hydra
 
 parser = argparse.ArgumentParser(fromfile_prefix_chars='@')
 parser.add_argument("--doTraining", help="run training", action="store_true")
+parser.add_argument("--doComparison", help="run comparison", action="store_true")
 parser.add_argument("--doQuickPlots", help="Make performance plots", action="store_true")
 parser.add_argument("--doIndices", help="create train/val/test indices file", action="store_true")
 parser.add_argument("--testParser", help="run training", action="store_true")
 parser.add_argument("--plotInput", help="run training")
+parser.add_argument("--comparisonFolder", help="run training")
 parser.add_argument("--plotOutput", help="run training")
 parser.add_argument("--training_input", help="where training files are")
 parser.add_argument("--training_output_path", help="where to dump training output")
 args = parser.parse_args(['--training_input','foo','@args_training.txt',
                             '--plotInput','foo','@args_training.txt',
+                            '--comparisonFolder','foo','@args_training.txt',
                             '--plotOutput','foo','@args_training.txt',
                             '--training_output_path','foo','@args_training.txt'])
 logger = logging.getLogger('train')
+
 
 
 def training_runner(rank, settings, kernel_size, stride):
@@ -71,177 +85,118 @@ def training_runner(rank, settings, kernel_size, stride):
     settings.save_options(settings.outputPath, 'training_settings')
     engine.train(settings)
 
-def init_training(settings, kernel_size, stride):
+def init_training():
 
-    # Choose settings for utils class in util_config.ini
-    if settings==0:
-        print("Settings did not initialize properly, exiting...")
-        exit
-
-    os.environ['MASTER_ADDR'] = 'localhost'
-    master_port = 12355
-    # Automatically select port based on base gpu
-    os.environ['MASTER_PORT'] = str(master_port)
-
-    if settings.multiGPU:
-        master_port += settings.gpuNumber[0]
-        mp.spawn(training_runner, nprocs=len(settings.gpuNumber), args=(settings,kernel_size,stride,))
-    else:
-        training_runner(0, settings, kernel_size, stride)
-
-def efficiency_plots(settings, arch_name, newest_directory, plot_output):
-
-    # retrieve test indices
-    idx = np.array(sorted(np.load(str(newest_directory) + "/indices.npy")))
-
-    # grab relevent parameters from hy file and only keep the values corresponding to those in the test set
-    hy = h5py.File(settings.inputPath, "r")
-    print(list(hy.keys()))
-    angles = np.array(hy['angles'])[idx].squeeze() 
-    labels = np.array(hy['labels'])[idx].squeeze() 
-    veto = np.array(hy['veto'])[idx].squeeze()
-    energies = np.array(hy['energies'])[idx].squeeze()
-    positions = np.array(hy['positions'])[idx].squeeze()
-    directions = math.direction_from_angles(angles)
-
-    # calculate number of hits 
-    events_hits_index = np.append(hy['event_hits_index'], hy['hit_pmt'].shape[0])
-    nhits = (events_hits_index[idx+1] - events_hits_index[idx]).squeeze()
-
-    # calculate additional parameters 
-    towall = math.towall(positions, angles, tank_axis = 2)
-    dwall = math.dwall(positions, tank_axis = 2)
-    momentum = math.momentum_from_energy(energies, labels)
-
-    # apply cuts, as of right now it should remove any events with zero pmt hits (no veto cut)
-    nhit_cut = nhits > 0 #25
-    # veto_cut = (veto == 0)
-    hy_electrons = (labels == 1)
-    hy_muons = (labels == 2)
-    basic_cuts = ((hy_electrons | hy_muons) & nhit_cut)
-
-    # set class labels and decrease values within labels to match either 0 or 1 
-    e_label = [0]
-    mu_label = [1]
-    labels = [x - 1 for x in labels]
-
-    # get the bin indices and edges for parameters
-    polar_binning = get_binning(np.cos(angles[:,0]), 10, -1, 1)
-    az_binning = get_binning(angles[:,1]*180/np.pi, 10, -180, 180)
-    mom_binning = get_binning(momentum, 10)
-    dwall_binning = get_binning(dwall, 10)
-    towall_binning = get_binning(towall, 10)
-
-    # create watchmal classification object to be used as runs for plotting the efficiency relative to event angle  
-    stride1 = '/fast_scratch/jsholdice/OutputPath/stride1'
-    stride3 = '/fast_scratch/jsholdice/OutputPath/stride3'
-    stride5 = '/fast_scratch/jsholdice/OutputPath/stride5'
-    run_result = [WatChMaLClassification(stride1, 'stride1', labels, idx, basic_cuts, color="blue", linestyle='-'),
-                  WatChMaLClassification(stride3, 'stride3', labels, idx, basic_cuts, color="green", linestyle='-'),
-                  WatChMaLClassification(stride5, 'stride5', labels, idx, basic_cuts, color="black", linestyle='-')]
-    
-    # for single runs and then can plot the ROC curves with it 
-    #run = [WatChMaLClassification(newest_directory, 'title', labels, idx, basic_cuts, color="blue", linestyle='-')]
-
-    # calculate the thresholds that reject 99.9% of muons and apply cut to all events
-    muon_rejection = 0.999
-    muon_efficiency = 1 - muon_rejection
-    for r in run_result:
-        r.cut_with_fixed_efficiency(e_label, mu_label, muon_efficiency, select_labels = mu_label)
-
-    # plot signal efficiency against true momentum, dwall, towall, zenith, azimuth
-    e_polar_fig, polar_ax = plot_efficiency_profile(run_result, polar_binning, select_labels=e_label, x_label="Cosine of Zenith", y_label="Electron Signal PID Efficiency [%]", errors=True, x_errors=False)
-    e_az_fig, az_ax = plot_efficiency_profile(run_result, az_binning, select_labels=e_label, x_label="Azimuth [Degree]", y_label="Electron Signal PID Efficiency [%]", errors=True, x_errors=False)
-    e_mom_fig, mom_ax = plot_efficiency_profile(run_result, mom_binning, select_labels=e_label, x_label="True Momentum", y_label="Electron Signal PID Efficiency [%]", errors=True, x_errors=False)
-    e_dwall_fig, dwall_ax = plot_efficiency_profile(run_result, dwall_binning, select_labels=e_label, x_label="Distance from Detector Wall [cm]", y_label="Electron Signal PID Efficiency [%]", errors=True, x_errors=False)
-    e_towall_fig, towall_ax = plot_efficiency_profile(run_result, towall_binning, select_labels=e_label, x_label="Distance to Wall Along Particle Direction [cm]  ", y_label="Electron Signal PID Efficiency [%]", errors=True, x_errors=False)
-
-    # plot signal efficiency against true momentum, dwall, towall, zenith, azimuth
-    mu_polar_fig, polar_ax = plot_efficiency_profile(run_result, polar_binning, select_labels=mu_label, x_label="Cosine of Zenith", y_label="Muon Background Miss-PID [%]", errors=True, x_errors=False)
-    mu_az_fig, az_ax = plot_efficiency_profile(run_result, az_binning, select_labels=mu_label, x_label="Azimuth [Degree]", y_label="Muon Background Miss-PID [%]", errors=True, x_errors=False)
-    mu_mom_fig, mom_ax = plot_efficiency_profile(run_result, mom_binning, select_labels=mu_label, x_label="True Momentum", y_label="Muon Background Miss-PID [%]", errors=True, x_errors=False)
-    mu_dwall_fig, dwall_ax = plot_efficiency_profile(run_result, dwall_binning, select_labels=mu_label, x_label="Distance from Detector Wall [cm]", y_label="Muon Background Miss-PID [%]", errors=True, x_errors=False)
-    mu_towall_fig, towall_ax = plot_efficiency_profile(run_result, towall_binning, select_labels=mu_label, x_label="Distance to Wall Along Particle Direction [cm]  ", y_label="Muon Background Miss-PID [%]", errors=True, x_errors=False)
-
-    # save plots of effiency as a function of specific parameters
-    e_polar_fig.savefig(plot_output + 'e_polar_efficiency.png', format='png')
-    e_az_fig.savefig(plot_output + 'e_azimuthal_efficiency.png', format='png')
-    e_mom_fig.savefig(plot_output + 'e_momentum_efficiency.png', format='png')
-    e_dwall_fig.savefig(plot_output + 'e_dwall_efficiency.png', format='png')
-    e_towall_fig.savefig(plot_output + 'e_towall_efficiency.png', format='png')
-
-    mu_polar_fig.savefig(plot_output + 'mu_polar_efficiency.png', format='png')
-    mu_az_fig.savefig(plot_output + 'mu_azimuthal_efficiency.png', format='png')
-    mu_mom_fig.savefig(plot_output + 'mu_momentum_efficiency.png', format='png')
-    mu_dwall_fig.savefig(plot_output + 'mu_dwall_efficiency.png', format='png')
-    mu_towall_fig.savefig(plot_output + 'mu_towall_efficiency.png', format='png')
-
-    # remove comment for ROC curves of single run 
-    #return run
-
-
-def main():
-
-    if args.doIndices:
-        make_split_file('/fast_scratch/WatChMaL/data/T2K/nov18_emu_fullCylinder_500k_1/combine_combine.hy',
-                            train_val_test_split=[0.70,0.15], output_path='/fast_scratch/fcormier/t2k/ml/wcsim/jan5_emu_fullCylinder_500k_1/')
-
-    #settings = utils()
-    #kernel_size = settings.kernel
-    #stride = settings.stride
-
-    if args.doTraining:
-        init_training(settings, kernel_size, stride) 
-        
-    if args.testParser:
-        pass
-
-    if args.doQuickPlots:
-        
-        _, arch_name = settings.getPlotInfo()
-        newest_directory = max([os.path.join(args.plotInput,d) for d in os.listdir(args.plotInput)], key=os.path.getmtime)
-        
-        # create and save plots in specific training run file 
-        plot_output = args.plotOutput + str(datetime.now()) + '/'
-        os.mkdir(plot_output)
-
-        # generate and save signal and background efficiency plots 
-        #run = efficiency_plots(settings, arch_name, newest_directory, plot_output)
-        efficiency_plots(settings, arch_name, newest_directory, plot_output)
-        
-        
-        '''
-        # plot training progression of training displaying the loss and accuracy throughout training and validation
-        fig,ax1,ax2 = run.plot_training_progression()
-        fig.tight_layout(pad=2.0) 
-        fig.savefig(plot_output + 'log_test.png', format='png')
-
-        # calculate softmax and plot ROC curve 
-        softmax = np.load(newest_directory + '/softmax.npy')
-        labels = np.load(newest_directory + '/labels.npy')
-        fpr, tpr, thr = compute_roc(softmax, labels, 1, 0)
-        plot_tuple = plot_roc(fpr,tpr,thr,'Electron', 'Muon', fig_list=[0,1,2], plot_label=arch_name)
-        for i, plot in enumerate(plot_tuple):
-            plot.savefig(plot_output + 'roc' + str(i) + '.png', format='png')
-        '''
-
-if __name__ == '__main__':
-    # pylint: disable=no-value-for-parameter
-    print("MAIN")
-    main()
-
-
-'''
-elif args.doTraining:
-    main()
-
-
-
-
-elif args.testParser:
     settings = utils()
+    settings.set_output_directory()
+    default_call = ["python", "WatChMaL/main.py", "--config-name=t2k_resnet_train"] 
+    indicesFile = check_list_and_convert(settings.indicesFile)
+    featureExtractor = check_list_and_convert(settings.featureExtractor)
+    lr = check_list_and_convert(settings.lr)
+    lr_decay = check_list_and_convert(settings.lr_decay)
+    weightDecay = check_list_and_convert(settings.weightDecay)
+    perm_output_path = settings.outputPath
+    variable_list = ['indicesFile', 'learningRate', 'weightDecay', 'learningRateDecay', 'featureExtractor']
+    for x in itertools.product(indicesFile, lr, weightDecay, lr_decay, featureExtractor):
+        default_call = ["python", "WatChMaL/main.py", "--config-name=t2k_resnet_train"] 
+        now = datetime.now()
+        dt_string = now.strftime("%d%m%Y-%H%M%S")
+        settings.outputPath = perm_output_path+'/'+dt_string+'/'
+        print(f'TRAINING WITH\n indices file: {x[0]}\n learning rate: {x[1]}\n learning rate decay: {x[3]}\n weight decay: {x[2]}\n feature extractor: {x[4]}\n output path: {settings.outputPath}')
+        default_call.append("data.split_path="+x[0])
+        default_call.append("tasks.train.optimizers.lr="+str(x[1]))
+        default_call.append("tasks.train.optimizers.weight_decay="+str(x[2]))
+        default_call.append("tasks.train.scheduler.gamma="+str(x[3]))
+        default_call.append("model.feature_extractor._target_="+str(x[4]))
+        default_call.append("hydra.run.dir=" +str(settings.outputPath))
+        default_call.append("dump_path=" +str(settings.outputPath))
+        print(default_call)
+        subprocess.call(default_call)
+        end_training(settings, variable_list, x)
 
-elif args.doQuickPlots:
-    fig = disp_learn_hist(args.plotInput, losslim=2, show=False)
-    fig.savefig(args.plotOutput+'resnet_test.png', format='png')
-'''
+
+def check_list_and_convert(input):
+    if type(input) is not list:
+        output = [input]
+    else:
+        output = input
+    return output
+
+def end_training(settings, variable_list, variables):
+
+    softmaxes = np.load(settings.outputPath+'/'+'softmax.npy')
+    labels = np.load(settings.outputPath+'/'+'labels.npy')
+
+    auroc = AUROC(task="binary")
+    auc = auroc (torch.tensor(softmaxes[:,1]),torch.tensor(labels))
+    print(f'AUC: {auc}')
+    roc = ROC(task="binary")
+    fpr, tpr, thresholds = roc(torch.tensor(softmaxes[:,1]), torch.tensor(labels))
+    bkg_rej = 0
+    for i, eff in enumerate(tpr):
+        #From SK data quality paper, table 13 https://t2k.org/docs/technotes/399/v2r1
+        if eff > 0.99876:
+            print(f'tpr: {eff}, bkg rej: {1/fpr[i]}')
+            bkg_rej = 1/fpr[i]
+            break
+
+    root = etree.Element('Training')
+    level1_stats = etree.SubElement(root, 'Stats')
+    level2 = etree.SubElement(level1_stats, 'AUC', var=str(float(auc)))
+    level2 = etree.SubElement(level1_stats, 'Bkg_Rejection', var=str(float(bkg_rej)))
+    level1_var = etree.SubElement(root, 'Variables')
+    for name, var in zip(variable_list, variables):
+        level2 = etree.SubElement(level1_var, name, var=str(var))
+    level1_files = etree.SubElement(root, 'Files')
+    level2 = etree.SubElement(level1_files, 'inputPath', var=settings.inputPath)
+    tree = etree.ElementTree(root)
+    tree.write(settings.outputPath+'training_stats.xml', pretty_print=True, xml_declaration=True,   encoding="utf-8")
+    
+
+
+
+if args.doComparison:
+    compare_outputs(args.comparisonFolder)
+
+if args.doIndices:
+    make_split_file('/fast_scratch/fcormier/t2k/ml/wcsim/jan16_emu_fullCylinder_1M_1/combine_combine.hy',
+                        train_val_test_split=[0.70,0.15], output_path='/fast_scratch/fcormier/t2k/ml/wcsim/jan16_emu_fullCylinder_1M_1/', nfolds=3)
+
+#settings = utils()
+#kernel_size = settings.kernel
+#stride = settings.stride
+
+if args.doTraining:
+    init_training() 
+    
+if args.testParser:
+    pass
+
+if args.doQuickPlots:
+    
+    _, arch_name = settings.getPlotInfo()
+    newest_directory = max([os.path.join(args.plotInput,d) for d in os.listdir(args.plotInput)], key=os.path.getmtime)
+    
+    # create and save plots in specific training run file 
+    plot_output = args.plotOutput + str(datetime.now()) + '/'
+    os.mkdir(plot_output)
+
+    # generate and save signal and background efficiency plots 
+    #run = efficiency_plots(settings, arch_name, newest_directory, plot_output)
+    efficiency_plots(settings, arch_name, newest_directory, plot_output)
+    
+    
+    '''
+    # plot training progression of training displaying the loss and accuracy throughout training and validation
+    fig,ax1,ax2 = run.plot_training_progression()
+    fig.tight_layout(pad=2.0) 
+    fig.savefig(plot_output + 'log_test.png', format='png')
+
+    # calculate softmax and plot ROC curve 
+    softmax = np.load(newest_directory + '/softmax.npy')
+    labels = np.load(newest_directory + '/labels.npy')
+    fpr, tpr, thr = compute_roc(softmax, labels, 1, 0)
+    plot_tuple = plot_roc(fpr,tpr,thr,'Electron', 'Muon', fig_list=[0,1,2], plot_label=arch_name)
+    for i, plot in enumerate(plot_tuple):
+        plot.savefig(plot_output + 'roc' + str(i) + '.png', format='png')
+    '''

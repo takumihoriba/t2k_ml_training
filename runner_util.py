@@ -72,6 +72,7 @@ def make_split_file(h5_file,train_val_test_split=[0.70,0.15], output_path='data/
             val_indices = np.isin(unique_inverse, val_rootfile_indices)
             val_indices = np.array(range(length), dtype='int64')[val_indices]
             print(f"Fold {i}")
+            print(output_path)
             np.savez(output_path + 'train_val_test_nFolds'+str(nfolds)+'_fold'+str(i)+'.npz',
                     test_idxs=test_indices, val_idxs=val_indices, train_idxs=train_indices)
 
@@ -104,20 +105,32 @@ class utils():
         Returns:
             int: 0 if there is a problem
         """
+        self.list_for_sweep = []
         for key in config[arch]:
             #use lower() to ignore any mistakes in capital letter in config file
             if 'InputPath'.lower() in key.lower():
                 self.inputPath = config[arch][key]
+            elif 'IndicesFile'.lower() in key.lower():
+                if ',' in config[arch][key]:
+                    self.indicesFile = self.getListOfInput(config[arch][key], str)
+                    self.list_for_sweep.append(self.indicesFile)
+                else:
+                    self.indicesFile = config[arch][key]
             elif 'OutputPath'.lower() in key.lower():
                 now = datetime.now()
-                output_file = config[arch][key] + str(now) + '/'
+                dt_string = now.strftime("%d%m%Y-%H%M%S")
+                output_file = config[arch][key]
                 self.outputPath = output_file
             elif 'NetworkArchitecture'.lower() in key.lower():
                 self.arch = config[arch][key]
             elif 'Classifier'.lower() in key.lower():
                 self.classifier = config[arch][key]
             elif 'FeatureExtractor'.lower() in key.lower():
-                self.featureExtractor = config[arch][key]
+                if ',' in config[arch][key]:
+                    self.featureExtractor = self.getListOfInput(config[arch][key], str)
+                    self.list_for_sweep.append(self.featureExtractor)
+                else:
+                    self.featureExtractor = config[arch][key]
             elif 'DoClassification'.lower() in key.lower():
                 self.doClassification = config[arch].getboolean(key)
             elif 'DoRegression'.lower() in key.lower():
@@ -160,7 +173,7 @@ class utils():
             elif 'UseTime'.lower() in key.lower():
                 self.useTime = config[arch].getboolean(key)
             elif 'TrainTestSplit'.lower() in key.lower():
-                train_val_test_split[0] = config[arch].getfloat(key)
+                self.train_val_test_split = config[arch].getfloat(key)
             elif 'TestValSplit'.lower() in key.lower():
                 self.testValSplit = config[arch].getfloat(key)
             elif 'DataModel'.lower() in key.lower():
@@ -169,10 +182,24 @@ class utils():
                 self.pmtPositionsFile = config[arch][key]
             elif 'RestoreBestState'.lower() in key.lower():
                 self.restoreBestState = config[arch].getboolean(key)
+            elif 'LearningRateDecay'.lower() in key.lower():
+                if ',' in config[arch][key]:
+                    self.lr_decay = self.getListOfInput(config[arch][key], float)
+                    self.list_for_sweep.append(self.lr_decay)
+                else:
+                    self.lr_decay = config[arch].getfloat(key)
             elif 'LearningRate'.lower() in key.lower():
-                self.lr = config[arch].getfloat(key)
+                if ',' in config[arch][key]:
+                    self.lr = self.getListOfInput(config[arch][key], float)
+                    self.list_for_sweep.append(self.lr)
+                else:
+                    self.lr = config[arch].getfloat(key)
             elif 'WeightDecay'.lower() in key.lower():
-                self.weightDecay = config[arch].getfloat(key)
+                if ',' in config[arch][key]:
+                    self.weightDecay = self.getListOfInput(config[arch][key], float)
+                    self.list_for_sweep.append(self.weightDecay)
+                else:
+                    self.weightDecay = config[arch].getfloat(key)
             elif 'Seed'.lower() in key.lower():
                 self.seed = config[arch].getint(key)
             else:
@@ -219,6 +246,11 @@ class utils():
         numbers = list(map(int, numbers))
         self.gpuNumber = numbers
         self.multiGPU = True
+
+    def getListOfInput(self, list_of_inputs, type):
+        inputs = list_of_inputs.split(",")
+        inputs = list(map(type, inputs))
+        return inputs
 
     def checkLabels(self):
         with h5py.File(self.inputPath,mode='r') as h5fw:

@@ -1,4 +1,5 @@
---doIndices
+--doComparison
+--comparisonFolder=/fast_scratch/fcormier/t2k/ml/training/resnet_feb3_resnet_test_epoch20_1/
 --plotInput=/fast_scratch/fcormier/t2k/ml/training/resnet_emu_weightDecay_sep13_test_1/
 --plotOutput=output/resnet_emu_weightDecay_sep13_test_1/
 --training_input=data/training_paths.txt
