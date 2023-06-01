@@ -167,7 +167,7 @@ if args.doComparison:
     compare_outputs(args.comparisonFolder)
 
 if args.doIndices:
-    make_split_file(args.inputIndices, train_val_test_split=[0.70,0.15], output_path=args.outputIndicesPath, nfolds=args.numFolds)
+    make_split_file(args.indicesInput, train_val_test_split=[0.70,0.15], output_path=args.indicesOutputPath, nfolds=args.numFolds)
 
 #settings = utils()
 #kernel_size = settings.kernel

@@ -18,6 +18,14 @@ from WatChMaL.watchmal.model.resnet import resnet18
 import torch
 from torch.utils.data.sampler import SubsetRandomSampler
 
+def calc_dwall_cut(file,cut):
+    temp_x = h5py.File(file,mode='r')['positions'][:,0,0]
+    temp_y = h5py.File(file,mode='r')['positions'][:,0,1]
+    temp_r = np.sqrt(np.add(np.square(np.array(temp_x)), np.square(np.array(temp_y))))
+    temp_z = np.abs(np.array(h5py.File(file,mode='r')['positions'][:,0,2]))
+    return np.logical_and(temp_r < (1690-cut), temp_z < (1850-cut))
+
+
 def make_split_file(h5_file,train_val_test_split=[0.70,0.15], output_path='data/', seed=0, nfolds=3):
     """Outputs indices to split h5 files into train/test/val 
 
@@ -29,13 +37,19 @@ def make_split_file(h5_file,train_val_test_split=[0.70,0.15], output_path='data/
         nfolds (int, optional): Number of folds. Makes it so that you can make different folds for n fold validation. Defaults to 3.
     """
     #Check if you can actually do the number of folds requested
-    if (1.0-train_val_test_split[0]-train_val_test_split[1])*nfolds > 1:
+    nfolds = int(nfolds)
+    print(f'nfolds: {nfolds}, nfolds type: {type(nfolds)}')
+    if (1.0-train_val_test_split[0]-train_val_test_split[1])*int(nfolds) > 1:
         print(f"ERROR: {nfolds} folds is too many for the test proportion ({(1.0-train_val_test_split[0]-train_val_test_split[1])}) requested ")
         return 0
 
     length = len(h5py.File(h5_file,mode='r')['event_hits_index'])
     unique_root_files, unique_inverse, unique_counts = np.unique(h5py.File(h5_file,mode='r')['root_files'], return_inverse=True, return_counts=True)
-
+    dwall_cut_value = 100
+    print(f'WARNING: Applying a dwall cut of {dwall_cut_value} cm')
+    dwall_cut = calc_dwall_cut(h5_file, dwall_cut_value)
+    print(f'WARNING: Removing veto events')
+    indices_to_keep = np.array(range(len(dwall_cut)))[np.logical_and(dwall_cut, ~h5py.File(h5_file,mode='r')['veto'][:])]
     #Based on root files, divide indices into train/val/test
     length_rootfiles = len(unique_root_files)
 
@@ -45,7 +59,6 @@ def make_split_file(h5_file,train_val_test_split=[0.70,0.15], output_path='data/
         train_rootfile_indices = random.sample(range(length_rootfiles), int(train_val_test_split[0]*len(list(range(length_rootfiles)))))
         train_indices = np.isin(unique_inverse, train_rootfile_indices)
         train_indices = np.array(range(length), dtype='int64')[train_indices]
-        print(train_indices)
         train_rootfiles_set = set(train_rootfile_indices)
         index_rootfiles_set = set(range(length_rootfiles))
         other_rootfiles_indices = list(index_rootfiles_set - train_rootfiles_set)
@@ -55,6 +68,11 @@ def make_split_file(h5_file,train_val_test_split=[0.70,0.15], output_path='data/
         test_indices = np.array(range(length), dtype='int64')[test_indices]
         val_indices = np.isin(unique_inverse, val_rootfile_indices)
         val_indices = np.array(range(length), dtype='int64')[val_indices]
+
+        #Applying cuts
+        train_indices = train_indices[np.isin(train_indices, indices_to_keep)]
+        test_indices = test_indices[np.isin(test_indices, indices_to_keep)]
+        val_indices = val_indices[np.isin(val_indices, indices_to_keep)]
 
         np.savez(output_path + 'train'+str(train_val_test_split[0])+'_val'+str(train_val_test_split[1])+'_test'+str(1-train_val_test_split[0]-train_val_test_split[1])+'.npz',
                     test_idxs=test_indices, val_idxs=val_indices, train_idxs=train_indices)
@@ -71,6 +89,12 @@ def make_split_file(h5_file,train_val_test_split=[0.70,0.15], output_path='data/
             test_indices = np.array(range(length), dtype='int64')[test_indices]
             val_indices = np.isin(unique_inverse, val_rootfile_indices)
             val_indices = np.array(range(length), dtype='int64')[val_indices]
+
+            #Applying cuts
+            train_indices = train_indices[np.isin(train_indices, indices_to_keep)]
+            test_indices = test_indices[np.isin(test_indices, indices_to_keep)]
+            val_indices = val_indices[np.isin(val_indices, indices_to_keep)]
+
             print(f"Fold {i}")
             print(output_path)
             np.savez(output_path + 'train_val_test_nFolds'+str(nfolds)+'_fold'+str(i)+'.npz',
