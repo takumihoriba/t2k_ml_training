@@ -73,6 +73,8 @@ def make_split_file(h5_file,train_val_test_split=[0.70,0.15], output_path='data/
         train_indices = train_indices[np.isin(train_indices, indices_to_keep)]
         test_indices = test_indices[np.isin(test_indices, indices_to_keep)]
         val_indices = val_indices[np.isin(val_indices, indices_to_keep)]
+        print(test_indices)
+        print(val_indices)
 
         np.savez(output_path + 'train'+str(train_val_test_split[0])+'_val'+str(train_val_test_split[1])+'_test'+str(1-train_val_test_split[0]-train_val_test_split[1])+'.npz',
                     test_idxs=test_indices, val_idxs=val_indices, train_idxs=train_indices)
@@ -298,6 +300,7 @@ class utils():
             self.classification_engine = self.classification_engine.cuda()
 
     def initDataset(self, rank):
+        print("DOING INIT DATASET")
         """Initializes data_config and data_loader necessary to configure the training engine. Also sets up train/test/validation split of indices
 
         Returns:
