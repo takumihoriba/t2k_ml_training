@@ -27,32 +27,36 @@ class dealWithOutputs():
         #Find which dictionaries are the same
         for i, item_1 in enumerate(self.list_of_input_variables):
             for j, item_2 in enumerate(self.list_of_input_variables):
-                if item_1 == item_2 and i!=j:
-                    set_of_same.append([i,j])
+                #if item_1 == item_2 and i!=j:
+                #    set_of_same.append([i,j])
+                set_of_same.append([i,j])
+        #            print('set_of_same = ', set_of_same)
         
         out = []
         #Combine all same dictionaries into unique sets
         while len(set_of_same)>0:
             first, *rest = set_of_same
             first = set(first)
-
+            print('first1 = ', first)
             lf = -1
             while len(first)>lf:
                 lf = len(first)
-
+                
                 rest2 = []
                 for r in rest:
                     if len(first.intersection(set(r)))>0:
                         first |= set(r)
+                        print('first2 = ', first)
                     else:
                         rest2.append(r)     
                 rest = rest2
-
+                print('rest = ', rest)
             out.append(first)
             set_of_same = rest
 
         self.unique_sets = out
-
+        print('self.unique_sets', self.unique_sets)
+        
 
     def calc_stats(self):
         self.final_stats_dict = []
@@ -69,9 +73,9 @@ class dealWithOutputs():
                 temp_stats[stat] = [np.mean(temp_stats[stat]), np.std(temp_stats[stat])]
             self.final_stats_dict.append(temp_stats)
             self.final_variable_dict.append(self.list_of_input_variables[list(set)[0]])
-
-        print(self.final_variable_dict)
-        print(self.final_stats_dict)
+        #print('self.unique = ', self.unique_sets)
+        print('self.final_variable_dict = ', self.final_variable_dict)
+        print('self.final_stats_dict = ', self.final_stats_dict)
 
         #Assumes all dictionaries have same variables
         '''
@@ -106,20 +110,20 @@ class dealWithOutputs():
         return output_string
 
     def make_plots(self):
-
+        print(1)
         plot_folder = self.directory + '/plots/'
         self.set_output_directory(plot_folder)
+        print(2)
         for i, dir in enumerate(self.list_of_directories):
+            print(dir)
             self.set_output_directory(plot_folder+dir.replace(self.directory,''))
             plot_output = plot_folder+dir.replace(self.directory,'')+"/"
             label = self.convert_variables_to_label(self.list_of_input_variables[i])
             run = efficiency_plots(self.list_of_input_files[i], '', dir, plot_output, label=label)
-            fig,ax1= run.plot_training_progression(y_loss_lim=[0.,2.], doAccuracy=False, label=label)
+            fig, ax1, ax2 = run.plot_training_progression(y_loss_lim=[0.,2.], doAccuracy=True, label=label)
             fig.tight_layout(pad=2.0) 
             fig.savefig(plot_output + 'log_test.png', format='png')
-
-        
-
+            #print(323)
 
 
 def compare_outputs(folder):
@@ -154,3 +158,6 @@ def compare_outputs(folder):
     outputs.find_unique()
     outputs.calc_stats()
     outputs.make_plots()
+    #print('outputs.find_unique() = ', outputs.find_unique())
+    #print('outputs.calc_stats() = ', outputs.calc_stats())
+    #print('outputs.make_plots() = ', outputs.make_plots())

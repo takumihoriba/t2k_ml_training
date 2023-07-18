@@ -23,7 +23,7 @@ def calc_dwall_cut(file,cut):
     temp_y = h5py.File(file,mode='r')['positions'][:,0,1]
     temp_r = np.sqrt(np.add(np.square(np.array(temp_x)), np.square(np.array(temp_y))))
     temp_z = np.abs(np.array(h5py.File(file,mode='r')['positions'][:,0,2]))
-    return np.logical_and(temp_r < (1690-cut), temp_z < (1850-cut))
+    return np.logical_and(temp_r < (1690-cut), temp_z < (1810-cut))
 
 
 def make_split_file(h5_file,train_val_test_split=[0.70,0.15], output_path='data/', seed=0, nfolds=3):
@@ -45,7 +45,7 @@ def make_split_file(h5_file,train_val_test_split=[0.70,0.15], output_path='data/
 
     length = len(h5py.File(h5_file,mode='r')['event_hits_index'])
     unique_root_files, unique_inverse, unique_counts = np.unique(h5py.File(h5_file,mode='r')['root_files'], return_inverse=True, return_counts=True)
-    dwall_cut_value = 100
+    dwall_cut_value = 0
     print(f'WARNING: Applying a dwall cut of {dwall_cut_value} cm')
     dwall_cut = calc_dwall_cut(h5_file, dwall_cut_value)
     print(f'WARNING: Removing veto events')

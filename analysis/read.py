@@ -107,7 +107,7 @@ class WatChMaLOutput(ABC, metaclass=ABCMeta):
             Tuple of arrays of training progression log values, see `read_training_log_from_csv` for details.
         """
         train_files = glob.glob(self.directory + "/log_train*.csv")
-        print(self.directory)
+        #print(self.directory)
         print('train_files: ' + str(train_files))
         if train_files:
             return self.read_training_log_from_csv(self.directory)
