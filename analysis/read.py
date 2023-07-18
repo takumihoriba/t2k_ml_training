@@ -81,6 +81,7 @@ class WatChMaLOutput(ABC, metaclass=ABCMeta):
         ax1_1.plot(self.train_log_epoch, self.train_log_loss, lw=2, label='Train loss', color='b', alpha=0.3)
         ax2_1.plot(self.val_log_epoch, self.val_log_loss, lw=2, label='Validation loss', color='b')
         if plot_best:
+            print(self.val_log_best)
             ax2_1.plot(self.val_log_epoch[self.val_log_best], self.val_log_loss[self.val_log_best], lw=0, marker='o',
                     label='Best validation loss', color='darkblue')
         if y_lim is not None:
