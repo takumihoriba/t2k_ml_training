@@ -198,13 +198,13 @@ class utils():
                     self.kernel = self.getListOfInput(config[arch][key], int)
                     self.list_for_sweep.append(self.kernel)
                 else:
-                    self.kernel = config[arch].getfloat(key)
+                    self.kernel = config[arch][key]
             elif 'Stride'.lower() in key.lower():
                 if ',' in config[arch][key]:
                     self.stride = self.getListOfInput(config[arch][key], int)
                     self.list_for_sweep.append(self.stride)
                 else:
-                    self.stride = config[arch].getfloat(key)
+                    self.stride = config[arch][key]
             elif 'ReportInterval'.lower() in key.lower():
                 self.reportInterval = config[arch].getint(key)
             elif 'ValInterval'.lower() in key.lower():
