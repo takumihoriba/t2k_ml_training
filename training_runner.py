@@ -109,12 +109,14 @@ def init_training():
     stride = check_list_and_convert(settings.stride)
     kernelSize = check_list_and_convert(settings.kernel)
     variable_list = ['indicesFile', 'learningRate', 'weightDecay', 'learningRateDecay', 'featureExtractor', 'stride', 'kernelSize']
+    #variable_list = ['indicesFile', 'learningRate', 'weightDecay', 'learningRateDecay', 'featureExtractor', 'kernelSize']
     for x in itertools.product(indicesFile, lr, weightDecay, lr_decay, featureExtractor, stride, kernelSize):
+    #for x in itertools.product(indicesFile, lr, weightDecay, lr_decay, featureExtractor, kernelSize):
         default_call = ["python", "WatChMaL/main.py", "--config-name=t2k_resnet_train"] 
         now = datetime.now()
         dt_string = now.strftime("%d%m%Y-%H%M%S")
         #settings.outputPath = perm_output_path+'/'+dt_string+'/'
-        settings.outputPath = '/fast_scratch/ipress/rangeBall/18072023-104647/'
+        settings.outputPath = '/fast_scratch/ipress/rangeBall//20072023-193606/'
         print(f'TRAINING WITH\n indices file: {x[0]}\n learning rate: {x[1]}\n learning rate decay: {x[3]}\n weight decay: {x[2]}\n feature extractor: {x[4]}\n output path: {settings.outputPath}')
         default_call.append("data.split_path="+x[0])
         default_call.append("tasks.train.optimizers.lr="+str(x[1]))
@@ -123,8 +125,8 @@ def init_training():
         default_call.append("model.feature_extractor._target_="+str(x[4]))
         default_call.append("hydra.run.dir=" +str(settings.outputPath))
         default_call.append("dump_path=" +str(settings.outputPath))
-        #default_call.append("model.feature_extractor.stride="+str(x[5]))
-        #default_call.append("model.feature_extractor.kernelSize="+str(x[6]))
+        default_call.append("model.feature_extractor.stride="+str(x[5]))
+        default_call.append("model.feature_extractor.kernelSize="+str(x[6]))
         print(default_call)
         subprocess.call(default_call)
         end_training(settings, variable_list, x)
