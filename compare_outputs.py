@@ -126,22 +126,19 @@ class dealWithOutputs():
             fig, ax1, ax2 = run.plot_training_progression(y_loss_lim=[0.,2.], doAccuracy=True, label=label)
             fig.tight_layout(pad=2.0) 
             fig.savefig(plot_output + 'log_test.png', format='png')
-            #print(323)
 
     def roc(self):
-        print('1234')
         plot_folder = (self.directory + '/plots/')
-        #dirs =  str(glob.glob(directory+'/*/'))
         self.set_output_directory(plot_folder)
-        print('fdf')
         for i, dir in enumerate(self.list_of_directories):
-            print('asf')
+            #set output directories
             self.set_output_directory(plot_folder+dir.replace(self.directory,''))
             plot_output = plot_folder+dir.replace(self.directory,'')+"/"
+            #load softmax and labels and create a roc_curve
             softmaxes = np.load(self.list_of_directories[i]+'/softmax.npy')
             labels = np.load(self.list_of_directories[i]+'/labels.npy')
             fpr, tpr, _ = metrics.roc_curve(torch.tensor(labels),torch.tensor(softmaxes[:,1]))
-            
+            #plot roc curve
             plt.plot(fpr*100, tpr*100, label = 'ROC curve')
             plt.xlabel('False Positive Rate (%)')
             plt.ylabel('True Positive Rate (%)')
@@ -150,7 +147,7 @@ class dealWithOutputs():
             plt.title('ROC Curve')
             plt.savefig(plot_output + 'roc.png', format='png')
             plt.close()
-            
+            #plot high efficiency roc curve
             plt.plot(tpr*100, (100/fpr), label = 'ROC curve')
             plt.xlabel('True Positive Rate (%)')
             plt.ylabel('1/False Positive Rate (1/%)')
