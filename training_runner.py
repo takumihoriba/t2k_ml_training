@@ -24,6 +24,7 @@ import analysis.utils.math as math
 from runner_util import utils, train_config, make_split_file
 from analysis.utils.binning import get_binning
 from compare_outputs import compare_outputs
+from sklearn.metrics import roc_curve
 
 from torchmetrics import AUROC, ROC
 
@@ -115,8 +116,8 @@ def init_training():
         default_call = ["python", "WatChMaL/main.py", "--config-name=t2k_resnet_train"] 
         now = datetime.now()
         dt_string = now.strftime("%d%m%Y-%H%M%S")
-        #settings.outputPath = perm_output_path+'/'+dt_string+'/'
-        settings.outputPath = '/fast_scratch/ipress/rangeBall//20072023-193606/'
+        settings.outputPath = perm_output_path+'/'+dt_string+'/'
+        #settings.outputPath = '/fast_scratch/ipress/emu/wcsim/training/24072023-104743/'
         print(f'TRAINING WITH\n indices file: {x[0]}\n learning rate: {x[1]}\n learning rate decay: {x[3]}\n weight decay: {x[2]}\n feature extractor: {x[4]}\n output path: {settings.outputPath}')
         default_call.append("data.split_path="+x[0])
         default_call.append("tasks.train.optimizers.lr="+str(x[1]))
@@ -146,7 +147,9 @@ def end_training(settings, variable_list, variables):
 
     auroc = AUROC(task="binary")
     auc = auroc (torch.tensor(softmaxes[:,1]),torch.tensor(labels))
+    roc = roc_curve(torch.tensor(softmaxes[:,1]),torch.tensor(labels))
     print(f'AUC: {auc}')
+    print(f'ROC: {roc}')
     roc = ROC(task="binary")
     fpr, tpr, thresholds = roc(torch.tensor(softmaxes[:,1]), torch.tensor(labels))
     bkg_rej = 0
@@ -174,6 +177,7 @@ def end_training(settings, variable_list, variables):
 
 if args.doComparison:
     compare_outputs(args.comparisonFolder)
+    #roc(args.comparisonFolder)
 
 if args.doIndices:
     make_split_file(args.indicesInput, train_val_test_split=[0.70,0.15], output_path=args.indicesOutputPath, nfolds=args.numFolds, seed=0)
@@ -202,7 +206,7 @@ if args.doQuickPlots:
     efficiency_plots(settings, arch_name, newest_directory, plot_output)
     
     
-    '''
+    
     # plot training progression of training displaying the loss and accuracy throughout training and validation
     fig,ax1,ax2 = run.plot_training_progression()
     fig.tight_layout(pad=2.0) 
@@ -215,4 +219,4 @@ if args.doQuickPlots:
     plot_tuple = plot_roc(fpr,tpr,thr,'Electron', 'Muon', fig_list=[0,1,2], plot_label=arch_name)
     for i, plot in enumerate(plot_tuple):
         plot.savefig(plot_output + 'roc' + str(i) + '.png', format='png')
-    '''
+    

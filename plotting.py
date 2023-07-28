@@ -36,7 +36,7 @@ def efficiency_plots(inputPath, arch_name, newest_directory, plot_output, label=
     nhit_cut = nhits > 0 #25
     # veto_cut = (veto == 0)
     hy_electrons = (labels == 1)
-    hy_muons = (labels == 2)
+    hy_muons = (labels == 0)
     basic_cuts = ((hy_electrons | hy_muons) & nhit_cut)
     #print('basic cuts = ', basic_cuts)
     # set class labels and decrease values within labels to match either 0 or 1 
@@ -59,7 +59,7 @@ def efficiency_plots(inputPath, arch_name, newest_directory, plot_output, label=
     #run = [WatChMaLClassification(newest_directory, 'title', labels, idx, basic_cuts, color="blue", linestyle='-')]
 
     # calculate the thresholds that reject 99.9% of muons and apply cut to all events
-    muon_rejection = 0.5
+    muon_rejection = 0.99876
     muon_efficiency = 1 - muon_rejection
     for r in run_result:
         r.cut_with_fixed_efficiency(e_label, mu_label, muon_efficiency, select_labels = mu_label, selection = basic_cuts)
