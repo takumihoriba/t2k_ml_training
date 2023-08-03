@@ -1,13 +1,13 @@
 import glob
 import os
 import numpy as np
-#from roc import *
 import xml.etree.ElementTree as ET
 import matplotlib.pyplot as plt
 import torch
 from sklearn.metrics import roc_curve
 from plotting import efficiency_plots
 from sklearn import metrics
+from torchmetrics import AUROC, ROC
 
 class dealWithOutputs():
     def __init__(self, directory) -> None:
@@ -134,19 +134,25 @@ class dealWithOutputs():
             #set output directories
             self.set_output_directory(plot_folder+dir.replace(self.directory,''))
             plot_output = plot_folder+dir.replace(self.directory,'')+"/"
-            #load softmax and labels and create a roc_curve
+            
+            #load softmax and labels and create roc_curve's and calculate the AUC
             softmaxes = np.load(self.list_of_directories[i]+'/softmax.npy')
             labels = np.load(self.list_of_directories[i]+'/labels.npy')
             fpr, tpr, _ = metrics.roc_curve(torch.tensor(labels),torch.tensor(softmaxes[:,1]))
+            auroc = AUROC(task="binary")
+            auc = auroc (torch.tensor(softmaxes[:,1]),torch.tensor(labels))
+            auc = (round(float(auc), 5))
+            
             #plot roc curve
             plt.plot(fpr*100, tpr*100, label = 'ROC curve')
             plt.xlabel('False Positive Rate (%)')
             plt.ylabel('True Positive Rate (%)')
             plt.grid()
-            plt.legend()
+            plt.legend(title = f'AUC: {auc}')
             plt.title('ROC Curve')
             plt.savefig(plot_output + 'roc.png', format='png')
             plt.close()
+            
             #plot high efficiency roc curve
             plt.plot(tpr*100, (100/fpr), label = 'ROC curve')
             plt.xlabel('True Positive Rate (%)')
@@ -154,11 +160,68 @@ class dealWithOutputs():
             plt.grid()
             plt.xlim(60, 110)
             plt.yscale('log')
-            plt.legend()
+            plt.legend(title = f'AUC: {auc}')
             plt.title('High efficiency ROC Curve')
             plt.savefig(plot_output + 'roc_High_Eff.png', format='png')
             plt.close()
 
+
+    def roc_overlapper(self):
+        plot_folder = (self.directory + '/plots/')
+        self.set_output_directory(plot_folder)
+        for i, dir in enumerate(self.list_of_directories):
+            #set output directories
+            self.set_output_directory(plot_folder+dir.replace(self.directory,''))
+            plot_output = plot_folder+dir.replace(self.directory,'')+"/"
+            name = self.list_of_directories[i].split('/')[-1]
+            
+            #load softmax and labels and create roc_curve's and calculate the AUC
+            softmaxes = np.load(self.list_of_directories[i]+'/softmax.npy')
+            labels = np.load(self.list_of_directories[i]+'/labels.npy')
+            fpr, tpr, _ = metrics.roc_curve(torch.tensor(labels),torch.tensor(softmaxes[:,1]))
+            auroc = AUROC(task="binary")
+            auc = auroc (torch.tensor(softmaxes[:,1]),torch.tensor(labels))
+            auc = (round(float(auc), 5))
+            
+            #plot roc curve
+            plt.plot(fpr*100, tpr*100, label = f'ROC curve {name} \nAUC = {auc}')
+            plt.xlabel('False Positive Rate (%)')
+            plt.ylabel('True Positive Rate (%)')
+            plt.grid()
+            plt.legend()
+            plt.title('ROC Curve')
+        plt.savefig(plot_folder + 'roc_combined.png', format='png')
+        plt.close()    
+
+
+    def he_roc_overlapper(self):
+        plot_folder = (self.directory + '/plots/')
+        self.set_output_directory(plot_folder)
+        for i, dir in enumerate(self.list_of_directories):
+            #set output directories
+            self.set_output_directory(plot_folder+dir.replace(self.directory,''))
+            plot_output = plot_folder+dir.replace(self.directory,'')+"/"
+            name = self.list_of_directories[i].split('/')[-1]
+            
+            #load softmax and labels and create roc_curve's and calculate the AUC
+            softmaxes = np.load(self.list_of_directories[i]+'/softmax.npy')
+            labels = np.load(self.list_of_directories[i]+'/labels.npy')
+            fpr, tpr, _ = metrics.roc_curve(torch.tensor(labels),torch.tensor(softmaxes[:,1]))
+            auroc = AUROC(task="binary")
+            auc = auroc (torch.tensor(softmaxes[:,1]),torch.tensor(labels))
+            auc = (round(float(auc), 5))
+            
+            #plot high efficiency roc curve
+            plt.plot(tpr*100, (100/fpr), label = f'ROC curve {name} \nAUC = {auc}')
+            plt.xlabel('True Positive Rate (%)')
+            plt.ylabel('1/False Positive Rate (1/%)')
+            plt.grid()
+            plt.xlim(60, 110)
+            plt.yscale('log')
+            plt.legend()
+            plt.title('High efficiency ROC Curve')
+        plt.savefig(plot_folder + 'roc_High_Eff_combined.png', format='png')
+        plt.close()
 
 def compare_outputs(folder):
     dirs =  glob.glob(folder+'/*')
@@ -189,6 +252,8 @@ def compare_outputs(folder):
                     if 'inputPath' in child_2.tag:
                         inputFile = child_2.attrib['var']
         outputs.add_output(dir, indices_file, inputFile, input_variables, output_stats)
+    outputs.he_roc_overlapper()
+    outputs.roc_overlapper()
     outputs.roc()
     outputs.find_unique()
     outputs.calc_stats()
