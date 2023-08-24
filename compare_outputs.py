@@ -8,6 +8,24 @@ from sklearn.metrics import roc_curve
 from plotting import efficiency_plots
 from sklearn import metrics
 from torchmetrics import AUROC, ROC
+import h5py
+
+filename = "/fast_scratch/ipress/emu/jul31_emu_decayEVar_2/combine_combine.hy"
+h5fw = h5py.File(filename, 'r')
+
+def convert_label(label):
+    if label == 2:
+        return 'Gamma'
+    if label == 1:
+        return 'Electron'
+    if label == 0:
+        return 'Muon'
+    else:
+        return label
+
+def get_cherenkov_threshold(label):
+    threshold_dict = {0: 160., 1:0.8, 2: 0.}
+    return threshold_dict[label]
 
 class dealWithOutputs():
     def __init__(self, directory) -> None:

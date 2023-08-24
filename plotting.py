@@ -8,6 +8,10 @@ from analysis.utils.plotting import plot_legend
 from analysis.utils.binning import get_binning
 import analysis.utils.math as math
 
+def get_cherenkov_threshold(label):
+    threshold_dict = {0: 160., 1:0.8, 2: 0.}
+    return threshold_dict[label]
+
 def efficiency_plots(inputPath, arch_name, newest_directory, plot_output, label=None):
 
     # retrieve test indices
@@ -22,6 +26,8 @@ def efficiency_plots(inputPath, arch_name, newest_directory, plot_output, label=
     energies = np.array(hy['energies'])[idx].squeeze()
     positions = np.array(hy['positions'])[idx].squeeze()
     directions = math.direction_from_angles(angles)
+    cheThr = list(map(get_cherenkov_threshold, np.ravel(labels)))
+    visible_energy = energies - cheThr
 
     # calculate number of hits 
     events_hits_index = np.append(hy['event_hits_index'], hy['hit_pmt'].shape[0])
@@ -50,11 +56,12 @@ def efficiency_plots(inputPath, arch_name, newest_directory, plot_output, label=
     mom_binning = get_binning(momentum, 10)
     dwall_binning = get_binning(dwall, 10)
     towall_binning = get_binning(towall, 10)
+    visible_energy_binning = get_binning(visible_energy, 10)
 
     # create watchmal classification object to be used as runs for plotting the efficiency relative to event angle  
     stride1 = newest_directory
     run_result = [WatChMaLClassification(stride1, 'test', labels, idx, basic_cuts, color="blue", linestyle='-')]
-    
+
     # for single runs and then can plot the ROC curves with it 
     #run = [WatChMaLClassification(newest_directory, 'title', labels, idx, basic_cuts, color="blue", linestyle='-')]
 
@@ -77,6 +84,9 @@ def efficiency_plots(inputPath, arch_name, newest_directory, plot_output, label=
     mu_mom_fig, mom_ax = plot_efficiency_profile(run_result, mom_binning, select_labels=mu_label, x_label="True Momentum", y_label="Muon Background Miss-PID [%]", errors=True, x_errors=False, label=label)
     mu_dwall_fig, dwall_ax = plot_efficiency_profile(run_result, dwall_binning, select_labels=mu_label, x_label="Distance from Detector Wall [cm]", y_label="Muon Background Miss-PID [%]", errors=True, x_errors=False, label=label)
     mu_towall_fig, towall_ax = plot_efficiency_profile(run_result, towall_binning, select_labels=mu_label, x_label="Distance to Wall Along Particle Direction [cm]  ", y_label="Muon Background Miss-PID [%]", errors=True, x_errors=False, label=label)
+    
+    Visible_energy_mu_fig, visible_energy_mu_ax = plot_efficiency_profile(run_result, visible_energy_binning, select_labels=mu_label, x_label="Visible energy (MeV)", y_label="Muon Background Miss-PID [%]", errors=True, x_errors=False, label=label, y_lim = (0, 1))
+    Visible_energy_elec_fig, visible_energy_elec_ax = plot_efficiency_profile(run_result, visible_energy_binning, select_labels=e_label, x_label="Visible energy (MeV)", y_label="Electron Background Miss-PID [%]", errors=True, x_errors=False, label=label, y_lim = (0, 100))
 
     # save plots of effiency as a function of specific parameters
     e_polar_fig.savefig(plot_output + 'e_polar_efficiency.png', format='png')
@@ -90,6 +100,9 @@ def efficiency_plots(inputPath, arch_name, newest_directory, plot_output, label=
     mu_mom_fig.savefig(plot_output + 'mu_momentum_efficiency.png', format='png')
     mu_dwall_fig.savefig(plot_output + 'mu_dwall_efficiency.png', format='png')
     mu_towall_fig.savefig(plot_output + 'mu_towall_efficiency.png', format='png')
+    
+    Visible_energy_mu_fig.savefig(plot_output + 'Visible_energy_mu_efficiency.png', format = 'png')
+    Visible_energy_elec_fig.savefig(plot_output + 'Visible_energy_elec_efficiency.png', format = 'png')
 
     # remove comment for ROC curves of single run 
     return run_result[0]
