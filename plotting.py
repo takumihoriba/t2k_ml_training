@@ -15,7 +15,6 @@ def efficiency_plots(inputPath, arch_name, newest_directory, plot_output, label=
 
     # grab relevent parameters from hy file and only keep the values corresponding to those in the test set
     hy = h5py.File(inputPath, "r")
-    print(list(hy.keys()))
     angles = np.array(hy['angles'])[idx].squeeze() 
     labels = np.array(hy['labels'])[idx].squeeze() 
     veto = np.array(hy['veto'])[idx].squeeze()
@@ -33,21 +32,21 @@ def efficiency_plots(inputPath, arch_name, newest_directory, plot_output, label=
     momentum = math.momentum_from_energy(energies, labels)
 
     # apply cuts, as of right now it should remove any events with zero pmt hits (no veto cut)
-    nhit_cut = nhits > 0 #25
+    nhit_cut = nhits > 250 #25
     # veto_cut = (veto == 0)
     hy_electrons = (labels == 1)
     hy_muons = (labels == 0)
     basic_cuts = ((hy_electrons | hy_muons) & nhit_cut)
 
     # set class labels and decrease values within labels to match either 0 or 1 
-    e_label = [0]
-    mu_label = [1]
+    e_label = [1]
+    mu_label = [0]
     #labels = [x - 1 for x in labels]
 
     # get the bin indices and edges for parameters
     polar_binning = get_binning(np.cos(angles[:,0]), 10, -1, 1)
     az_binning = get_binning(angles[:,1]*180/np.pi, 10, -180, 180)
-    mom_binning = get_binning(momentum, 10)
+    mom_binning = get_binning(momentum, 10, minimum=0, maximum=1000)
     dwall_binning = get_binning(dwall, 10)
     towall_binning = get_binning(towall, 10)
 

@@ -31,6 +31,7 @@ def get_binning(x, bins=200, minimum=None, maximum=None, width=None):
     indices: np.ndarray
         output array of indices, of same shape as x
     """
+    print(f'In GetBinning: {x}')
     bin_array = np.array(bins)
     if bin_array.size == 1:
         if minimum is None:

@@ -134,6 +134,7 @@ def end_training(settings, variable_list, variables):
 
     softmaxes = np.load(settings.outputPath+'/'+'softmax.npy')
     labels = np.load(settings.outputPath+'/'+'labels.npy')
+    print(f'Unique labels in test set: {np.unique(labels,return_counts=True)}')
 
     auroc = AUROC(task="binary")
     auc = auroc (torch.tensor(softmaxes[:,1]),torch.tensor(labels))
@@ -167,7 +168,7 @@ if args.doComparison:
     compare_outputs(args.comparisonFolder)
 
 if args.doIndices:
-    make_split_file(args.indicesInput, train_val_test_split=[0.70,0.15], output_path=args.indicesOutputPath, nfolds=args.numFolds, seed=0)
+    make_split_file(args.indicesInput, train_val_test_split=[0.5,0.25], output_path=args.indicesOutputPath, nfolds=args.numFolds, seed=0)
 
 #settings = utils()
 #kernel_size = settings.kernel
