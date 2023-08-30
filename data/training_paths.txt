@@ -1,1 +1,1 @@
-/fast_scratch/ipress/emu/wcsim/jul18_wcsim_emu_range_1M_1/
+/fast_scratch/ipress/emu/emu_lowE_aug24/

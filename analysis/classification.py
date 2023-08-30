@@ -156,6 +156,7 @@ def plot_efficiency_profile(runs, binning, selection=None, select_labels=None, a
     ax: matplotlib.axes.Axes
     """
 
+    print('analysis is being called')
     if ax is None:
         fig, ax = plt.subplots(figsize=fig_size)
     else:

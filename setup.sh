@@ -1,1 +1,1 @@
-export PYTHONPATH=/home/ipress/t2k_ml_training/WatChMaL/:$PYTHONPATH
+export PYTHONPATH=/home/ipress/emu_training/WatChMaL/:$PYTHONPATH

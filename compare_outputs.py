@@ -270,9 +270,9 @@ def compare_outputs(folder):
                     if 'inputPath' in child_2.tag:
                         inputFile = child_2.attrib['var']
         outputs.add_output(dir, indices_file, inputFile, input_variables, output_stats)
-    outputs.he_roc_overlapper()
-    outputs.roc_overlapper()
-    outputs.roc()
+    #outputs.he_roc_overlapper()
+    #outputs.roc_overlapper()
+    #outputs.roc()
     outputs.find_unique()
     outputs.calc_stats()
     outputs.make_plots()

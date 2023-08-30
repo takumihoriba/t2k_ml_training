@@ -194,9 +194,12 @@ def binned_efficiencies(binned_cut, return_errors=True, reverse=False):
     errors: np.ndarray, optional
         array of binomial standard errors
     """
+    print('this function is being called')
     efficiencies = binned_mean(binned_cut, return_errors=False)*100
-    if reverse:
+    if True:
+        print('efficiencies before the subtraction', efficiencies)
         efficiencies = 100 - efficiencies
+        print('efficiencies after the subtraction', efficiencies)
     if return_errors:
         errors = binned_binomial_errors(binned_cut) * 100
         return efficiencies, errors

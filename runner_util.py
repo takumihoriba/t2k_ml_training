@@ -81,9 +81,9 @@ def make_split_file(h5_file,train_val_test_split=[0.70,0.15], output_path='data/
 
         test_indices = test_indices[np.isin(test_indices, indices_to_keep)]
         val_indices = val_indices[np.isin(val_indices, indices_to_keep)]
-        print(np.unique(labels[train_indices],return_counts=True))
-        print(np.unique(labels[val_indices],return_counts=True))
-        print(np.unique(labels[test_indices],return_counts=True))
+        #print(np.unique(labels[train_indices],return_counts=True))
+        #print(np.unique(labels[val_indices],return_counts=True))
+        #print(np.unique(labels[test_indices],return_counts=True))
 
         np.savez(output_path + 'train'+str(train_val_test_split[0])+'_val'+str(train_val_test_split[1])+'_test'+str(1-train_val_test_split[0]-train_val_test_split[1])+'.npz',
                     test_idxs=test_indices, val_idxs=val_indices, train_idxs=train_indices)
@@ -110,13 +110,16 @@ def make_split_file(h5_file,train_val_test_split=[0.70,0.15], output_path='data/
 
 
             print(f"Fold {i}")
-            print(np.unique(labels[train_indices],return_counts=True))
-            print(np.unique(labels[val_indices],return_counts=True))
-            print(np.unique(labels[test_indices],return_counts=True))
+            #print(np.unique(labels[train_indices],return_counts=True))
+            #print(np.unique(labels[val_indices],return_counts=True))
+            #print(np.unique(labels[test_indices],return_counts=True))
             print(output_path)
             np.savez(output_path + 'train_val_test_nFolds'+str(nfolds)+'_fold'+str(i)+'.npz',
                     test_idxs=test_indices, val_idxs=val_indices, train_idxs=train_indices)
-
+        
+    print(np.unique(labels[train_indices],return_counts=True))
+    print(np.unique(labels[val_indices],return_counts=True))
+    print(np.unique(labels[test_indices],return_counts=True))
 
 class train_config():
     def __init__(self,epochs, report_interval, val_interval, num_val_batches, checkpointing, save_interval) -> None:
