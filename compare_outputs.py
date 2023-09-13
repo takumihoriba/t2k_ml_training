@@ -110,6 +110,7 @@ class dealWithOutputs():
         plot_folder = self.directory + '/plots/'
         self.set_output_directory(plot_folder)
         for i, dir in enumerate(self.list_of_directories):
+            print(self.list_of_directories)
             self.set_output_directory(plot_folder+dir.replace(self.directory,''))
             plot_output = plot_folder+dir.replace(self.directory,'')+"/"
             label = self.convert_variables_to_label(self.list_of_input_variables[i])
