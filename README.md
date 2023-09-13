@@ -21,24 +21,10 @@ Once you've cloned the repo and initialized the submodule, there is some setup t
 
 Once you've cloned the directory, there is some setup to do.
 
-You want to use anaconda to install some packages. Make a folder in your home directory (e.g. miniconda), navigate to it,  and run
+You can use a singularity container to use the python packages needed to run this code. Simply run this everytime you log in:
 
 ```
-wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
-bash Miniconda3-latest-Linux-x86_64.sh 
-```
-
-This will download and install miniconda, with prompts to decide where to install. To load the conda environment used here, simply navigate to the top directory of the repo and run
-
-```
-conda env create --file=t2k_ml_train.yml
-conda activate t2k_ml_train
-```
-
-This conda environment should give you access to most libraries needed in this repo. If running things locally, when in the main repo directory, one should run this every new shell, except when running WCSim:
-
-```
-conda activate t2k_ml_train
+singularity shell --nv -B /fast_scratch -B /data -B /home /fast_scratch/triumfmlutils/containers/base_ml_recommended.simg
 ```
 
 ### Runner file
@@ -88,6 +74,10 @@ in _args\_training.txt_ to specify the input roofile to calculate the indices fr
 
 To then train on that rootfile with the indices files you crated, in _util\_config.ini_ set InputPath to the path+name of the rootfile, and IndicesFile to a comma separated list of path+name of the .npz indices files you created with this script. 
 
+There is another important file to change the options. From the main directory navigate to _WatChMaL/config/t2k\_resnet\_train.yaml_ (for ResNet training). Here you can change more options.
+
+To know which file to use to change options: _training\_runner.py_ has a function called _init\_training_ which reads in _util\_config.ini_ and overwrites the options listed in training\_runner.py in _t2k\_resnet\_train.yaml_. The rest of the options are defined in the .yaml file, regardless of if they are defined in _util\_config.ini_.
+
 ### After Training
 
 Files will be written out to the _OutputPath_ directory you specify in _util\_config.ini_. Additionally, some stats are quickly calculated at the end of each training fold and saved in _training_stats.xml_ in the output path directory. 
@@ -101,6 +91,17 @@ Once all trainings are done (if doing multiple folds), you can run some scripts 
 
 where comparisonFolder is the _outputPath_ where your training files were output. It should contain _training_stats.xml_ and all the other output files from training. The script will print out overall stats from training and create a sub-directory called _plots_ in _comparisonFolder_ showing some efficiency plots.
 
+### Evaluation
+
+You can run the evaluation step on an already trained network with options
+
+```
+--doEvaluation
+--evaluationInputDir=
+--evaluationOutputDir=
+```
+
+The input directory has to have a trained network weights to load, in a .pth file. Output will then have all the numpy files output.
 
 
 ### (OBSOLETE) Summarizing training

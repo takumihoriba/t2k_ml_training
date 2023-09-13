@@ -39,9 +39,11 @@ def make_split_file(h5_file,train_val_test_split=[0.70,0.15], output_path='data/
     #Check if you can actually do the number of folds requested
     nfolds = int(nfolds)
     print(f'nfolds: {nfolds}, nfolds type: {type(nfolds)}')
+    """
     if (1.0-train_val_test_split[0]-train_val_test_split[1])*int(nfolds) > 1:
         print(f"ERROR: {nfolds} folds is too many for the test proportion ({(1.0-train_val_test_split[0]-train_val_test_split[1])}) requested ")
         return 0
+    """
 
     length = len(h5py.File(h5_file,mode='r')['event_hits_index'])
     unique_root_files, unique_inverse, unique_counts = np.unique(h5py.File(h5_file,mode='r')['root_files'], return_inverse=True, return_counts=True)
@@ -50,8 +52,15 @@ def make_split_file(h5_file,train_val_test_split=[0.70,0.15], output_path='data/
     dwall_cut = calc_dwall_cut(h5_file, dwall_cut_value)
     print(f'WARNING: Removing veto events')
     print(f'WARNING: Removing range=-999 events')
-    indices_to_keep = np.array(range(len(dwall_cut)))[np.logical_and(np.logical_and(dwall_cut, ~h5py.File(h5_file,mode='r')['veto'][:]), np.ravel(h5py.File(h5_file,mode='r')['primary_charged_range']) != -999)]
+    print('WARNING: Removing events with decay electrons')
+    print(f'Original # indices: {len(dwall_cut)}')
+    #Range and decay electron
+    #indices_to_keep = np.array(range(len(dwall_cut)))[np.logical_and(np.logical_and(np.logical_and(dwall_cut,~h5py.File(h5_file,mode='r')['veto'][:]), np.ravel(h5py.File(h5_file,mode='r')['primary_charged_range']) != -999), np.ravel(h5py.File(h5_file,mode='r')['decay_electron_exists'][:]==0))]
+    #indices_to_keep = np.array(range(len(dwall_cut)))[np.logical_and(np.logical_and(dwall_cut,~h5py.File(h5_file,mode='r')['veto'][:]), np.ravel(h5py.File(h5_file,mode='r')['primary_charged_range']) != -999)]
+    #indices_to_keep = np.array(range(len(dwall_cut)))[np.logical_and(np.logical_and(dwall_cut,np.logical_and(~h5py.File(h5_file,mode='r')['veto'][:], ~h5py.File(h5_file,mode='r')['decay_electron_exists'][:])), np.ravel(h5py.File(h5_file,mode='r')['primary_charged_range']) != -999)]
     #indices_to_keep = np.array(range(len(dwall_cut)))[np.logical_and(dwall_cut, ~h5py.File(h5_file,mode='r')['veto'][:])]
+    #Keep all
+    indices_to_keep = np.array(range(len(dwall_cut)))
     print(f'indices to keep: {len(indices_to_keep)}')
     #Based on root files, divide indices into train/val/test
     length_rootfiles = len(unique_root_files)
@@ -65,8 +74,8 @@ def make_split_file(h5_file,train_val_test_split=[0.70,0.15], output_path='data/
         train_rootfiles_set = set(train_rootfile_indices)
         index_rootfiles_set = set(range(length_rootfiles))
         other_rootfiles_indices = list(index_rootfiles_set - train_rootfiles_set)
-        test_rootfile_indices = other_rootfiles_indices[0:int(train_val_test_split[1]*len(other_rootfiles_indices))]
-        val_rootfile_indices = other_rootfiles_indices[int(train_val_test_split[1]*len(other_rootfiles_indices)):len(other_rootfiles_indices)] 
+        val_rootfile_indices = other_rootfiles_indices[0:int(train_val_test_split[1]*len(other_rootfiles_indices))]
+        test_rootfile_indices = other_rootfiles_indices[int(train_val_test_split[1]*len(other_rootfiles_indices)):len(other_rootfiles_indices)] 
         test_indices = np.isin(unique_inverse, test_rootfile_indices)
         test_indices = np.array(range(length), dtype='int64')[test_indices]
         val_indices = np.isin(unique_inverse, val_rootfile_indices)
@@ -109,9 +118,9 @@ def make_split_file(h5_file,train_val_test_split=[0.70,0.15], output_path='data/
 
 
             print(f"Fold {i}")
-            print(np.unique(labels[train_indices],return_counts=True))
-            print(np.unique(labels[val_indices],return_counts=True))
-            print(np.unique(labels[test_indices],return_counts=True))
+            print(np.unique(np.ravel(labels)[train_indices], return_counts=True))
+            print(np.unique(np.ravel(labels)[val_indices],return_counts=True))
+            print(np.unique(np.ravel(labels)[test_indices],return_counts=True))
             print(output_path)
             np.savez(output_path + 'train_val_test_nFolds'+str(nfolds)+'_fold'+str(i)+'.npz',
                     test_idxs=test_indices, val_idxs=val_indices, train_idxs=train_indices)

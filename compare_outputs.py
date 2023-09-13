@@ -110,20 +110,21 @@ class dealWithOutputs():
         plot_folder = self.directory + '/plots/'
         self.set_output_directory(plot_folder)
         for i, dir in enumerate(self.list_of_directories):
+            print(self.list_of_directories)
             self.set_output_directory(plot_folder+dir.replace(self.directory,''))
             plot_output = plot_folder+dir.replace(self.directory,'')+"/"
             label = self.convert_variables_to_label(self.list_of_input_variables[i])
             run = efficiency_plots(self.list_of_input_files[i], '', dir, plot_output, label=label)
-            fig,ax1= run.plot_training_progression(y_loss_lim=[0.,2.], doAccuracy=False, label=label)
-            fig.tight_layout(pad=2.0) 
-            fig.savefig(plot_output + 'log_test.png', format='png')
+            #fig,ax1= run.plot_training_progression(y_loss_lim=[0.,2.], doAccuracy=False, label=label)
+            #fig.tight_layout(pad=2.0) 
+            #fig.savefig(plot_output + 'log_test.png', format='png')
 
         
 
 
 
 def compare_outputs(folder):
-    dirs =  glob.glob(folder+'/*')
+    dirs =  glob.glob(folder+'/*/')
     outputs = dealWithOutputs(folder)
     for dir in dirs:
         #Checks if training is done by checking if training_stats.xml is output

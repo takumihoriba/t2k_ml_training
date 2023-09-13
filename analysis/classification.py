@@ -163,6 +163,7 @@ def plot_efficiency_profile(runs, binning, selection=None, select_labels=None, a
     for r in runs:
         args = {**plot_args, **r.plot_args}
         run_selection = r.selection if selection is None else selection
+        print(f'binning: {binning}')
         r.plot_binned_efficiency(ax, binning, run_selection, select_labels, **args)
     ax.set_xlabel(x_label)
     ax.set_ylabel(y_label)

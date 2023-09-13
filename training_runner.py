@@ -33,6 +33,7 @@ import hydra
 
 parser = argparse.ArgumentParser(fromfile_prefix_chars='@')
 parser.add_argument("--doTraining", help="run training", action="store_true")
+parser.add_argument("--doEvaluation", help="run evaluation on already trained network", action="store_true")
 parser.add_argument("--doComparison", help="run comparison", action="store_true")
 parser.add_argument("--doQuickPlots", help="Make performance plots", action="store_true")
 parser.add_argument("--doIndices", help="create train/val/test indices file", action="store_true")
@@ -41,6 +42,8 @@ parser.add_argument("--plotInput", help="run training")
 parser.add_argument("--comparisonFolder", help="run training")
 parser.add_argument("--numFolds", help="run training")
 parser.add_argument("--indicesInput", help="run training")
+parser.add_argument("--evaluationInputDir", help="which training directory to get network for evaluation")
+parser.add_argument("--evaluationOutputDir", help="where to dump evaluation results")
 parser.add_argument("--indicesOutputPath", help="run training")
 parser.add_argument("--plotOutput", help="run training")
 parser.add_argument("--training_input", help="where training files are")
@@ -51,6 +54,8 @@ args = parser.parse_args(['--training_input','foo','@args_training.txt',
                             '--plotOutput','foo','@args_training.txt',
                             '--indicesInput','foo','@args_training.txt',
                             '--indicesOutputPath','foo','@args_training.txt',
+                            '--evaluationInputDir','foo','@args_training.txt',
+                            '--evaluationOutputDir','foo','@args_training.txt',
                             '--numFolds','foo','@args_training.txt',
                             '--training_output_path','foo','@args_training.txt'])
 logger = logging.getLogger('train')
@@ -134,6 +139,7 @@ def end_training(settings, variable_list, variables):
 
     softmaxes = np.load(settings.outputPath+'/'+'softmax.npy')
     labels = np.load(settings.outputPath+'/'+'labels.npy')
+    print(f'Unique labels in test set: {np.unique(labels,return_counts=True)}')
 
     auroc = AUROC(task="binary")
     auc = auroc (torch.tensor(softmaxes[:,1]),torch.tensor(labels))
@@ -167,7 +173,7 @@ if args.doComparison:
     compare_outputs(args.comparisonFolder)
 
 if args.doIndices:
-    make_split_file(args.indicesInput, train_val_test_split=[0.70,0.15], output_path=args.indicesOutputPath, nfolds=args.numFolds, seed=0)
+    make_split_file(args.indicesInput, train_val_test_split=[0.05,0.05], output_path=args.indicesOutputPath, nfolds=args.numFolds, seed=0)
 
 #settings = utils()
 #kernel_size = settings.kernel
@@ -175,6 +181,26 @@ if args.doIndices:
 
 if args.doTraining:
     init_training() 
+
+if args.doEvaluation:
+    settings = utils()
+    settings.outputPath = args.evaluationOutputDir
+    settings.set_output_directory()
+    default_call = ["python", "WatChMaL/main.py", "--config-name=t2k_resnet_train"] 
+    indicesFile = check_list_and_convert(settings.indicesFile)
+    perm_output_path = settings.outputPath
+
+    default_call = ["python", "WatChMaL/main.py", "--config-name=t2k_resnet_train"] 
+
+
+    settings.outputPath = args.evaluationInputDir
+    default_call.append("hydra.run.dir=" +str(args.evaluationInputDir))
+    default_call.append("engine.restore_path=" +str(args.evaluationInputDir))
+    default_call.append("dump_path=" +str(args.evaluationOutputDir))
+    default_call.append("tasks.train.epochs=" +str(0))
+    default_call.append("tasks.train.restore_best_state= true")
+    print(default_call)
+    subprocess.call(default_call)
     
 if args.testParser:
     pass

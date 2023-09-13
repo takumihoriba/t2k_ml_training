@@ -1,8 +1,10 @@
---doIndices
---numFolds=1
---indicesInput=/fast_scratch/fcormier/t2k/ml/wcsim/jan16_emu_fullCylinder_1M_1/combine_combine.hy
---indicesOutputPath=/fast_scratch/fcormier/t2k/ml/wcsim/jan16_emu_fullCylinder_1M_1/
---comparisonFolder=/fast_scratch/fcormier/t2k/ml/training/resnet_feb3_resnet_test_epoch20_1/
+--doTraining
+--numFolds=5
+--indicesInput=/fast_scratch/fcormier/t2k/ml/skdetsim/aug30_emu_skdetsim_smallFile_2/combine_combine.hy
+--indicesOutputPath=/fast_scratch/fcormier/t2k/ml/skdetsim/aug30_emu_skdetsim_smallFile_2/
+--evaluationInputDir=/fast_scratch/fcormier/t2k/ml/training/resnet_sep11_emu_skdetsim/11092023-101701/
+--evaluationOutputDir=/fast_scratch/fcormier/t2k/ml/training/resnet_sep11_emu_skdetsim//11092023-101701/
+--comparisonFolder=/data/fcormier/training/resnet_sep11_emu_skdetsim/
 --plotInput=/fast_scratch/fcormier/t2k/ml/training/resnet_emu_weightDecay_sep13_test_1/
 --plotOutput=output/resnet_emu_weightDecay_sep13_test_1/
 --training_input=data/training_paths.txt
