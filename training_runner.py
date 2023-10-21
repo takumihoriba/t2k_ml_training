@@ -116,7 +116,7 @@ def init_training():
         default_call = ["python", "WatChMaL/main.py", "--config-name=t2k_resnet_train"] 
         now = datetime.now()
         dt_string = now.strftime("%d%m%Y-%H%M%S")
-        dt_string = '20092023-101855'
+        #dt_string = '20092023-101855'
         settings.outputPath = perm_output_path+'/'+dt_string+'/'
         print(f'TRAINING WITH\n indices file: {x[0]}\n learning rate: {x[1]}\n learning rate decay: {x[3]}\n weight decay: {x[2]}\n feature extractor: {x[4]}\n output path: {settings.outputPath}')
         default_call.append("data.split_path="+x[0])
@@ -140,7 +140,7 @@ def check_list_and_convert(input):
         output = input
     return output
 
-def end_training(settings, variable_list, variables):
+def end_training(settings, variable_list=[], variables=[]):
 
     softmaxes = np.load(settings.outputPath+'/'+'softmax.npy')
     labels = np.load(settings.outputPath+'/'+'labels.npy')
@@ -149,15 +149,19 @@ def end_training(settings, variable_list, variables):
     auroc = AUROC(task="binary")
     auc = auroc (torch.tensor(softmaxes[:,1]),torch.tensor(labels))
     print(f'AUC: {auc}')
-    roc = ROC(task="binary")
-    fpr, tpr, thresholds = roc(torch.tensor(softmaxes[:,1]), torch.tensor(labels))
+    if len(np.unique(labels)) < 2:
+        roc = ROC(task="binary")
+        fpr, tpr, thresholds = roc(torch.tensor(softmaxes[:,1]), torch.tensor(labels))
+        for i, eff in enumerate(tpr):
+            #From SK data quality paper, table 13 https://t2k.org/docs/technotes/399/v2r1
+            if eff > 0.99876:
+                print(f'tpr: {eff}, bkg rej: {1/fpr[i]}')
+                bkg_rej = 1/fpr[i]
+                break
+    else:
+        roc = ROC(task="multiclass", num_classes = len(np.unique(labels)))
+        fpr, tpr, thresholds = roc(torch.tensor(softmaxes), torch.tensor(labels))
     bkg_rej = 0
-    for i, eff in enumerate(tpr):
-        #From SK data quality paper, table 13 https://t2k.org/docs/technotes/399/v2r1
-        if eff > 0.99876:
-            print(f'tpr: {eff}, bkg rej: {1/fpr[i]}')
-            bkg_rej = 1/fpr[i]
-            break
 
     root = etree.Element('Training')
     level1_stats = etree.SubElement(root, 'Stats')
@@ -206,6 +210,7 @@ if args.doEvaluation:
     default_call.append("tasks.train.restore_best_state= true")
     print(default_call)
     subprocess.call(default_call)
+    end_training(settings)
     
 if args.testParser:
     pass

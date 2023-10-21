@@ -5,7 +5,7 @@ import os
 import h5py
 
 from analysis.classification import WatChMaLClassification
-from analysis.classification import plot_efficiency_profile
+from analysis.classification import plot_efficiency_profile, plot_rocs
 from analysis.utils.plotting import plot_legend
 from analysis.utils.binning import get_binning
 from analysis.utils.fitqun import read_fitqun_file, make_fitqunlike_discr, get_rootfile_eventid_hash, plot_fitqun_comparison
@@ -40,6 +40,9 @@ def efficiency_plots(inputPath, arch_name, newest_directory, plot_output, label=
     events_hits_index = np.append(hy['event_hits_index'], hy['hit_pmt'].shape[0])
     nhits = (events_hits_index[idx+1] - events_hits_index[idx]).squeeze()
 
+    softmax_sum = np.sum(softmax,axis=1)
+    print(f"SOFTMAX SUM: {np.amin(softmax_sum)}")
+
     # calculate additional parameters 
     towall = math.towall(positions, angles, tank_axis = 2)
     dwall = math.dwall(positions, tank_axis = 2)
@@ -64,6 +67,7 @@ def efficiency_plots(inputPath, arch_name, newest_directory, plot_output, label=
         fitqun_cheThr = list(map(get_cherenkov_threshold, fitqun_labels))
         fitqun_visible_energy = fitqun_energy - fitqun_cheThr
 
+        #Get the ids that are in both ML and fitqun samples
         intersect, comm1, comm2 = np.intersect1d(fitqun_hash, ml_hash, assume_unique=True, return_indices=True)
         print(f'intersect: {intersect}, comm1: {comm1}, comm2: {comm2}')
         print(len(comm1))
@@ -80,6 +84,11 @@ def efficiency_plots(inputPath, arch_name, newest_directory, plot_output, label=
         fitqun_mom = momentum[comm2]
         fitqun_cheThr = list(map(get_cherenkov_threshold, fitqun_labels))
         fitqun_visible_energy = fitqun_matched_energies - fitqun_cheThr
+
+        temp = np.abs(fitqun_labels[fitqun_towall > 100]-fitqun_discr[fitqun_towall > 100])
+
+        print(f"fitqun e- avg towall > 100): {1-np.sum(temp[fitqun_labels[fitqun_towall > 100]==1])/len(temp[fitqun_labels[fitqun_towall > 100]==1])}")
+        print(f"fitqun mu- avg (towall > 100): {1-np.sum(temp[fitqun_labels[fitqun_towall > 100]==0])/len(temp[fitqun_labels[fitqun_towall > 100]==0])}")
         
 
 
@@ -91,14 +100,15 @@ def efficiency_plots(inputPath, arch_name, newest_directory, plot_output, label=
 
     # apply cuts, as of right now it should remove any events with zero pmt hits (no veto cut)
     nhit_cut = nhits > 0 #25
+    towall_cut = towall > 100
     # veto_cut = (veto == 0)
-    hy_electrons = (labels == 1)
-    hy_muons = (labels == 0)
-    basic_cuts = ((hy_electrons | hy_muons) & nhit_cut)
+    hy_electrons = (labels == 0)
+    hy_muons = (labels == 2)
+    basic_cuts = ((hy_electrons | hy_muons) & nhit_cut & towall_cut & (softmax_sum > 0))
 
     # set class labels and decrease values within labels to match either 0 or 1 
-    e_label = [1]
-    mu_label = [0]
+    e_label = [0]
+    mu_label = [1, 2]
     #labels = [x - 1 for x in labels]
 
     # get the bin indices and edges for parameters
@@ -122,29 +132,33 @@ def efficiency_plots(inputPath, arch_name, newest_directory, plot_output, label=
         print("2")
         fitqun_hy_electrons = (fitqun_labels == 1)
         fitqun_hy_muons = (fitqun_labels == 0)
-        fitqun_basic_cuts = (fitqun_hy_electrons | fitqun_hy_muons)
+        fitqun_basic_cuts = ((fitqun_hy_electrons | fitqun_hy_muons) & (fitqun_towall > 100))
         fitqun_mom_binning = get_binning(fitqun_mom, 9, minimum=100, maximum=1000)
         fitqun_ve_binning = get_binning(fitqun_visible_energy, 10, minimum=0, maximum=1000)
         fitqun_towall_binning = get_binning(fitqun_towall, 30, minimum=0, maximum=3000)
         fitqun_az_binning = get_binning(fitqun_az, 10, minimum=-180, maximum=180)
         fitqun_polar_binning = get_binning(fitqun_polar, 10, minimum=-1, maximum=1)
         fitqun_run_result = [WatChMaLClassification(stride1, 'test', fitqun_labels, fitqun_idx, fitqun_basic_cuts, color="blue", linestyle='-')]
+        (fitqun_run_result[0]).selection = fitqun_basic_cuts
         print(f'fitqun_discr: {fitqun_discr}')
         fitqun_run_result[0].cut = fitqun_discr.astype(np.bool)
+
+    #fig_roc, ax_roc = plot_rocs(run_result, e_label, mu_label, selection=basic_cuts, x_label="Electron Tagging Efficiency", y_label="Muon Rejection",
+    #          legend='best', mode='rejection', add_fitqun=False)
+    #fig_roc.savefig(plot_output + 'ml_roc.png', format='png')
 
     # calculate the thresholds that reject 99.9% of muons and apply cut to all events
     muon_rejection = 0.961
     muon_efficiency = 1 - muon_rejection
     for r in run_result:
-        r.cut_with_constant_binned_efficiency(e_label, mu_label, 0.98557, binning = visible_energy_binning, select_labels = e_label)
+        r.cut_with_constant_binned_efficiency(e_label, mu_label, 0.8, binning = visible_energy_binning, select_labels = e_label)
 
-    print(f"BAD EVENTS CHECK: {len(run_result[0]._softmaxes[(run_result[0]._softmaxes[:,1] > 0.5) & (labels == 0) & (ml_visible_energy > 900)])}")
 
     # plot signal efficiency against true momentum, dwall, towall, zenith, azimuth
-    e_polar_fig, polar_ax_e = plot_efficiency_profile(run_result, polar_binning, select_labels=e_label, x_label="Cosine of Zenith", y_label="Electron Signal PID Efficiency [%]", errors=True, x_errors=False, label=label)
-    e_az_fig, az_ax_e = plot_efficiency_profile(run_result, az_binning, select_labels=e_label, x_label="Azimuth [Degree]", y_label="Electron Signal PID Efficiency [%]", errors=True, x_errors=False, label=label)
-    e_mom_fig, mom_ax_e = plot_efficiency_profile(run_result, mom_binning, select_labels=e_label, x_label="True Momentum", y_label="Electron Signal PID Efficiency [%]", errors=True, x_errors=False, label=label)
-    e_ve_fig, ve_ax_e = plot_efficiency_profile(run_result, visible_energy_binning, select_labels=e_label, x_label="True Visible Energy [MeV]", y_label="Electron Signal PID Efficiency [%]", errors=True, x_errors=False, label=label)
+    e_polar_fig, polar_ax_e = plot_efficiency_profile(run_result, polar_binning, select_labels=e_label, x_label="Cosine of Zenith", y_label="Muon Signal PID Efficiency [%]", errors=True, x_errors=False, label=label)
+    e_az_fig, az_ax_e = plot_efficiency_profile(run_result, az_binning, select_labels=e_label, x_label="Azimuth [Degree]", y_label="Muon Signal PID Efficiency [%]", errors=True, x_errors=False, label=label)
+    e_mom_fig, mom_ax_e = plot_efficiency_profile(run_result, mom_binning, select_labels=e_label, x_label="True Momentum", y_label="Muon Signal PID Efficiency [%]", errors=True, x_errors=False, label=label)
+    e_ve_fig, ve_ax_e = plot_efficiency_profile(run_result, visible_energy_binning, select_labels=e_label, x_label="True Visible Energy [MeV]", y_label="Muon Signal PID Efficiency [%]", errors=True, x_errors=False, label=label)
     if do_fitqun:
         e_mom_fig_fitqun, mom_ax_fitqun_e = plot_efficiency_profile(fitqun_run_result, fitqun_mom_binning, select_labels=e_label, x_label="fiTQun e Momentum [MeV]", y_label="fiTQun Electron Signal PID Efficiency [%]", errors=True, x_errors=False, label='fitqun'+label)
         e_ve_fig_fitqun, ve_ax_fitqun_e = plot_efficiency_profile(fitqun_run_result, fitqun_ve_binning, select_labels=e_label, x_label="fiTQun Visible energy [MeV]", y_label="fiTQun Electron Signal PID Efficiency [%]", errors=True, x_errors=False, label='fitqun'+label)
@@ -154,12 +168,12 @@ def efficiency_plots(inputPath, arch_name, newest_directory, plot_output, label=
     e_towall_fig, towall_ax_e = plot_efficiency_profile(run_result, towall_binning, select_labels=e_label, x_label="Distance to Wall Along Particle Direction [cm]  ", y_label="Electron Signal PID Efficiency [%]", errors=True, x_errors=False, label=label)
 
     # plot signal efficiency against true momentum, dwall, towall, zenith, azimuth
-    mu_polar_fig, polar_ax_mu = plot_efficiency_profile(run_result, polar_binning, select_labels=mu_label, x_label="Cosine of Zenith", y_label="Muon Background Miss-PID [%]", errors=True, x_errors=False, label=label)
-    mu_az_fig, az_ax_mu = plot_efficiency_profile(run_result, az_binning, select_labels=mu_label, x_label="Azimuth [Degree]", y_label="Muon Background Miss-PID [%]", errors=True, x_errors=False, label=label)
-    mu_mom_fig, mom_ax_mu = plot_efficiency_profile(run_result, mom_binning, select_labels=mu_label, x_label="True Momentum", y_label="Muon Background Miss-PID [%]", errors=True, x_errors=False, label=label)
-    mu_ve_fig, ve_ax_mu = plot_efficiency_profile(run_result, visible_energy_binning, select_labels=mu_label, x_label="True Momentum", y_label="Muon Background Miss-PID [%]", errors=True, x_errors=False, label=label)
+    mu_polar_fig, polar_ax_mu = plot_efficiency_profile(run_result, polar_binning, select_labels=mu_label, x_label="Cosine of Zenith", y_label="Pi+ Background Miss-PID [%]", errors=True, x_errors=False, label=label)
+    mu_az_fig, az_ax_mu = plot_efficiency_profile(run_result, az_binning, select_labels=mu_label, x_label="Azimuth [Degree]", y_label="Pi+ Background Miss-PID [%]", errors=True, x_errors=False, label=label)
+    mu_mom_fig, mom_ax_mu = plot_efficiency_profile(run_result, mom_binning, select_labels=mu_label, x_label="True Momentum", y_label="Pi+ Background Miss-PID [%]", errors=True, x_errors=False, label=label)
+    mu_ve_fig, ve_ax_mu = plot_efficiency_profile(run_result, visible_energy_binning, select_labels=mu_label, x_label="True Momentum", y_label="Pi+ Background Miss-PID [%]", errors=True, x_errors=False, label=label)
     if do_fitqun:
-        mu_mom_fig_fitqun, mom_ax_fitqun_mu = plot_efficiency_profile(fitqun_run_result, fitqun_mom_binning, select_labels=mu_label, x_label="fiTQun e Momentum", y_label="fiTQun Muon Background Miss-PID [%]", errors=True, x_errors=False, label=label)
+        mu_mom_fig_fitqun, mom_ax_fitqun_mu = plot_efficiency_profile(fitqun_run_result, fitqun_mom_binning, select_labels=mu_label, x_label="fiTQun e Momentum", y_label="fiTQun Pi+ Background Miss-PID [%]", errors=True, x_errors=False, label=label)
         mu_ve_fig_fitqun, ve_ax_fitqun_mu = plot_efficiency_profile(fitqun_run_result, fitqun_ve_binning, select_labels=mu_label, x_label="fiTQun e Momentum", y_label="fiTQun Muon Background Miss-PID [%]", errors=True, x_errors=False, label=label)
         mu_towall_fig_fitqun, towall_ax_fitqun_mu = plot_efficiency_profile(fitqun_run_result, fitqun_towall_binning, select_labels=mu_label, x_label="Towall [cm]", y_label="fiTQun Muon Background Miss-PID [%]", errors=True, x_errors=False, label=label)
         mu_az_fig_fitqun, az_ax_fitqun_mu = plot_efficiency_profile(fitqun_run_result, fitqun_az_binning, select_labels=mu_label, x_label="Towall [cm]", y_label="fiTQun Muon Background Miss-PID [%]", errors=True, x_errors=False, label=label)
@@ -170,6 +184,7 @@ def efficiency_plots(inputPath, arch_name, newest_directory, plot_output, label=
     e_polar_fig.savefig(plot_output + 'e_polar_efficiency.png', format='png')
     e_az_fig.savefig(plot_output + 'e_azimuthal_efficiency.png', format='png')
     e_mom_fig.savefig(plot_output + 'e_momentum_efficiency.png', format='png')
+    e_ve_fig.savefig(plot_output + 'e_ve_efficiency.png', format='png')
     if do_fitqun:
         e_mom_fig_fitqun.savefig(plot_output + 'fitqun_e_momentum_efficiency.png', format='png')
     e_dwall_fig.savefig(plot_output + 'e_dwall_efficiency.png', format='png')
@@ -178,6 +193,7 @@ def efficiency_plots(inputPath, arch_name, newest_directory, plot_output, label=
     mu_polar_fig.savefig(plot_output + 'mu_polar_efficiency.png', format='png')
     mu_az_fig.savefig(plot_output + 'mu_azimuthal_efficiency.png', format='png')
     mu_mom_fig.savefig(plot_output + 'mu_momentum_efficiency.png', format='png')
+    mu_ve_fig.savefig(plot_output + 'mu_ve_efficiency.png', format='png')
     if do_fitqun:
         mu_mom_fig_fitqun.savefig(plot_output + 'fitqun_mu_momentum_efficiency.png', format='png')
     mu_dwall_fig.savefig(plot_output + 'mu_dwall_efficiency.png', format='png')

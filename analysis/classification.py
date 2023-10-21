@@ -273,6 +273,7 @@ class ClassificationRun(ABC):
         # put inf as first and last threshold for overflow bins
         padded_thresholds = np.concatenate(([np.inf], thresholds, [np.inf]))
         self.cut = np.array(discriminator_values) > padded_thresholds[binning[1]]
+        print(f'CUT: {self.cut}')
         if return_thresholds:
             return self.cut, thresholds
         else:
