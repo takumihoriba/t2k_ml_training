@@ -22,6 +22,7 @@ def efficiency_plots(inputPath, arch_name, newest_directory, plot_output, label=
 
     # retrieve test indices
     idx = np.array(sorted(np.load(str(newest_directory) + "/indices.npy")))
+    idx = np.unique(idx)
     softmax = np.array(np.load(str(newest_directory) + "/softmax.npy"))
 
     # grab relevent parameters from hy file and only keep the values corresponding to those in the test set
@@ -104,11 +105,11 @@ def efficiency_plots(inputPath, arch_name, newest_directory, plot_output, label=
     # veto_cut = (veto == 0)
     hy_electrons = (labels == 0)
     hy_muons = (labels == 2)
-    basic_cuts = ((hy_electrons | hy_muons) & nhit_cut & towall_cut & (softmax_sum > 0))
+    basic_cuts = ((hy_electrons | hy_muons) & nhit_cut & towall_cut)
 
     # set class labels and decrease values within labels to match either 0 or 1 
     e_label = [0]
-    mu_label = [1, 2]
+    mu_label = [2]
     #labels = [x - 1 for x in labels]
 
     # get the bin indices and edges for parameters
@@ -143,9 +144,9 @@ def efficiency_plots(inputPath, arch_name, newest_directory, plot_output, label=
         print(f'fitqun_discr: {fitqun_discr}')
         fitqun_run_result[0].cut = fitqun_discr.astype(np.bool)
 
-    #fig_roc, ax_roc = plot_rocs(run_result, e_label, mu_label, selection=basic_cuts, x_label="Electron Tagging Efficiency", y_label="Muon Rejection",
-    #          legend='best', mode='rejection', add_fitqun=False)
-    #fig_roc.savefig(plot_output + 'ml_roc.png', format='png')
+    fig_roc, ax_roc = plot_rocs(run_result, e_label, mu_label, selection=basic_cuts, x_label="Electron Tagging Efficiency", y_label="Muon Rejection",
+              legend='best', mode='rejection', add_fitqun=False)
+    fig_roc.savefig(plot_output + 'ml_roc.png', format='png')
 
     # calculate the thresholds that reject 99.9% of muons and apply cut to all events
     muon_rejection = 0.961
@@ -159,26 +160,26 @@ def efficiency_plots(inputPath, arch_name, newest_directory, plot_output, label=
     e_az_fig, az_ax_e = plot_efficiency_profile(run_result, az_binning, select_labels=e_label, x_label="Azimuth [Degree]", y_label="Muon Signal PID Efficiency [%]", errors=True, x_errors=False, label=label)
     e_mom_fig, mom_ax_e = plot_efficiency_profile(run_result, mom_binning, select_labels=e_label, x_label="True Momentum", y_label="Muon Signal PID Efficiency [%]", errors=True, x_errors=False, label=label)
     e_ve_fig, ve_ax_e = plot_efficiency_profile(run_result, visible_energy_binning, select_labels=e_label, x_label="True Visible Energy [MeV]", y_label="Muon Signal PID Efficiency [%]", errors=True, x_errors=False, label=label)
+    e_dwall_fig, dwall_ax = plot_efficiency_profile(run_result, dwall_binning, select_labels=e_label, x_label="Distance from Detector Wall [cm]", y_label="Muon Signal PID Efficiency [%]", errors=True, x_errors=False, label=label)
+    e_towall_fig, towall_ax_e = plot_efficiency_profile(run_result, towall_binning, select_labels=e_label, x_label="Distance to Wall Along Particle Direction [cm]  ", y_label="Muon Signal PID Efficiency [%]", errors=True, x_errors=False, label=label)
     if do_fitqun:
         e_mom_fig_fitqun, mom_ax_fitqun_e = plot_efficiency_profile(fitqun_run_result, fitqun_mom_binning, select_labels=e_label, x_label="fiTQun e Momentum [MeV]", y_label="fiTQun Electron Signal PID Efficiency [%]", errors=True, x_errors=False, label='fitqun'+label)
         e_ve_fig_fitqun, ve_ax_fitqun_e = plot_efficiency_profile(fitqun_run_result, fitqun_ve_binning, select_labels=e_label, x_label="fiTQun Visible energy [MeV]", y_label="fiTQun Electron Signal PID Efficiency [%]", errors=True, x_errors=False, label='fitqun'+label)
         e_towall_fig_fitqun, towall_ax_fitqun_e = plot_efficiency_profile(fitqun_run_result, fitqun_towall_binning, select_labels=e_label, x_label="Truth toWall [cm]", y_label="fiTQun Electron Signal PID Efficiency [%]", errors=True, x_errors=False, label='fitqun'+label)
         e_az_fig_fitqun, az_ax_fitqun_e = plot_efficiency_profile(fitqun_run_result, fitqun_az_binning, select_labels=e_label, x_label="Truth Azimuth [deg]", y_label="fiTQun Electron Signal PID Efficiency [%]", errors=True, x_errors=False, label='fitqun'+label)
-    e_dwall_fig, dwall_ax = plot_efficiency_profile(run_result, dwall_binning, select_labels=e_label, x_label="Distance from Detector Wall [cm]", y_label="Electron Signal PID Efficiency [%]", errors=True, x_errors=False, label=label)
-    e_towall_fig, towall_ax_e = plot_efficiency_profile(run_result, towall_binning, select_labels=e_label, x_label="Distance to Wall Along Particle Direction [cm]  ", y_label="Electron Signal PID Efficiency [%]", errors=True, x_errors=False, label=label)
 
     # plot signal efficiency against true momentum, dwall, towall, zenith, azimuth
     mu_polar_fig, polar_ax_mu = plot_efficiency_profile(run_result, polar_binning, select_labels=mu_label, x_label="Cosine of Zenith", y_label="Pi+ Background Miss-PID [%]", errors=True, x_errors=False, label=label)
     mu_az_fig, az_ax_mu = plot_efficiency_profile(run_result, az_binning, select_labels=mu_label, x_label="Azimuth [Degree]", y_label="Pi+ Background Miss-PID [%]", errors=True, x_errors=False, label=label)
     mu_mom_fig, mom_ax_mu = plot_efficiency_profile(run_result, mom_binning, select_labels=mu_label, x_label="True Momentum", y_label="Pi+ Background Miss-PID [%]", errors=True, x_errors=False, label=label)
-    mu_ve_fig, ve_ax_mu = plot_efficiency_profile(run_result, visible_energy_binning, select_labels=mu_label, x_label="True Momentum", y_label="Pi+ Background Miss-PID [%]", errors=True, x_errors=False, label=label)
+    mu_ve_fig, ve_ax_mu = plot_efficiency_profile(run_result, visible_energy_binning, select_labels=mu_label, x_label="True Visible Energy [MeV]", y_label="Pi+ Background Miss-PID [%]", errors=True, x_errors=False, label=label)
+    mu_towall_fig, towall_ax_mu = plot_efficiency_profile(run_result, towall_binning, select_labels=mu_label, x_label="Distance to Wall Along Particle Direction [cm]  ", y_label="Pi+ Background Miss-PID [%]", errors=True, x_errors=False, label=label)
+    mu_dwall_fig, dwall_ax = plot_efficiency_profile(run_result, dwall_binning, select_labels=mu_label, x_label="Distance from Detector Wall [cm]", y_label="Pi+ Background Miss-PID [%]", errors=True, x_errors=False, label=label)
     if do_fitqun:
         mu_mom_fig_fitqun, mom_ax_fitqun_mu = plot_efficiency_profile(fitqun_run_result, fitqun_mom_binning, select_labels=mu_label, x_label="fiTQun e Momentum", y_label="fiTQun Pi+ Background Miss-PID [%]", errors=True, x_errors=False, label=label)
         mu_ve_fig_fitqun, ve_ax_fitqun_mu = plot_efficiency_profile(fitqun_run_result, fitqun_ve_binning, select_labels=mu_label, x_label="fiTQun e Momentum", y_label="fiTQun Muon Background Miss-PID [%]", errors=True, x_errors=False, label=label)
         mu_towall_fig_fitqun, towall_ax_fitqun_mu = plot_efficiency_profile(fitqun_run_result, fitqun_towall_binning, select_labels=mu_label, x_label="Towall [cm]", y_label="fiTQun Muon Background Miss-PID [%]", errors=True, x_errors=False, label=label)
         mu_az_fig_fitqun, az_ax_fitqun_mu = plot_efficiency_profile(fitqun_run_result, fitqun_az_binning, select_labels=mu_label, x_label="Towall [cm]", y_label="fiTQun Muon Background Miss-PID [%]", errors=True, x_errors=False, label=label)
-    mu_towall_fig, towall_ax_mu = plot_efficiency_profile(run_result, towall_binning, select_labels=mu_label, x_label="Distance to Wall Along Particle Direction [cm]  ", y_label="Muon Background Miss-PID [%]", errors=True, x_errors=False, label=label)
-    mu_dwall_fig, dwall_ax = plot_efficiency_profile(run_result, dwall_binning, select_labels=mu_label, x_label="Distance from Detector Wall [cm]", y_label="Muon Background Miss-PID [%]", errors=True, x_errors=False, label=label)
 
     # save plots of effiency as a function of specific parameters
     e_polar_fig.savefig(plot_output + 'e_polar_efficiency.png', format='png')

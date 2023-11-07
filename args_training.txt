@@ -1,10 +1,10 @@
---doIndices
---numFolds=8
---indicesInput=/fast_scratch/WatChMaL/data/T2K/oct20_eMuPosPion_0dwallCut_flat_1/combine_combine.hy
---indicesOutputPath=/fast_scratch/WatChMaL/data/T2K/oct20_eMuPosPion_0dwallCut_flat_1/
---evaluationInputDir=/fast_scratch/fcormier/t2k/ml/training/resnet_oct6_eMuPosPions_0dwall_1M_test_2/20092023-101855/
---evaluationOutputDir=/fast_scratch/fcormier/t2k/ml/training/resnet_oct6_eMuPosPions_0dwall_1M_test_2/20092023-101855/
---comparisonFolder=/fast_scratch/fcormier/t2k/ml/training/resnet_oct6_eMuPosPions_0dwall_1M_test_2/
+--doComparison
+--numFolds=7
+--indicesInput=/fast_scratch_1/fcormier/t2k/ml/skdetsim/oct20_eMuPosPion_0dwallCut_flat_1/combine_combine.hy
+--indicesOutputPath=/fast_scratch_1/fcormier/t2k/ml/skdetsim/oct20_eMuPosPion_0dwallCut_flat_1/
+--evaluationInputDir=/fast_scratch/fcormier/t2k/ml/training/resnet_sep22_emu_skdetsim_bugFix_0dwallCut_1/20092023-101855/
+--evaluationOutputDir=/fast_scratch/fcormier/t2k/ml/training/resnet_sep22_emu_skdetsim_bugFix_0dwallCut_1/20092023-101855/
+--comparisonFolder=/fast_scratch/fcormier/t2k/ml/training/resnet_oct20_eMuPosPions_0dwall_1M_flat_1/
 --plotInput=/fast_scratch/fcormier/t2k/ml/training/resnet_emu_weightDecay_sep13_test_1/
 --plotOutput=output/resnet_emu_weightDecay_sep13_test_1/
 --training_input=data/training_paths.txt
