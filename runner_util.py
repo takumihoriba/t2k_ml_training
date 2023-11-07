@@ -69,8 +69,7 @@ def make_split_file(h5_file,train_val_test_split=[0.70,0.15], output_path='data/
         #Keep all    
         else:
             indices_to_keep = np.array(range(len(dwall_cut)))
-    
-    indices_to_keep = np.array(range(len(dwall_cut)))
+            
     print(f'indices to keep: {len(indices_to_keep)}')
     #Based on root files, divide indices into train/val/test
     length_rootfiles = len(unique_root_files)
