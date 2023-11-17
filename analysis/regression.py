@@ -2,10 +2,10 @@ import numpy as np
 import tabulate
 import matplotlib.pyplot as plt
 from abc import ABC, abstractmethod
-from analysis.read import WatChMaLOutput
+from WatChMaL.analysis.read import WatChMaLOutput
 import analysis.utils.math as math
 import analysis.utils.binning as bins
-from analysis.utils.plotting import plot_binned_values
+from WatChMaL.analysis.utils.plotting import plot_binned_values
 
 
 def plot_histograms(runs, quantity, selection=None, ax=None, fig_size=None, x_label="", y_label="", legend='best', **hist_args):

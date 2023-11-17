@@ -17,12 +17,12 @@ import torch.multiprocessing as mp
 import torch.nn as nn
 
 from WatChMaL.watchmal.engine.engine_classifier import ClassifierEngine
-from analysis.classification import WatChMaLClassification
-from analysis.classification import plot_efficiency_profile
-from analysis.utils.plotting import plot_legend
+from WatChMaL.analysis.classification import WatChMaLClassification
+from WatChMaL.analysis.classification import plot_efficiency_profile
+from WatChMaL.analysis.utils.plotting import plot_legend
 import analysis.utils.math as math
 from runner_util import utils, train_config, make_split_file
-from analysis.utils.binning import get_binning
+from WatChMaL.analysis.utils.binning import get_binning
 from compare_outputs import compare_outputs
 
 from torchmetrics import AUROC, ROC

@@ -4,11 +4,11 @@ import os
 
 import h5py
 
-from analysis.classification import WatChMaLClassification
-from analysis.classification import plot_efficiency_profile
-from analysis.utils.plotting import plot_legend
-from analysis.utils.binning import get_binning
-from analysis.utils.fitqun import read_fitqun_file, make_fitqunlike_discr, get_rootfile_eventid_hash, plot_fitqun_comparison
+from WatChMaL.analysis.classification import WatChMaLClassification
+from WatChMaL.analysis.classification import plot_efficiency_profile
+from WatChMaL.analysis.utils.plotting import plot_legend
+from WatChMaL.analysis.utils.binning import get_binning
+from WatChMaL.analysis.utils.fitqun import read_fitqun_file, make_fitqunlike_discr, get_rootfile_eventid_hash, plot_fitqun_comparison
 import analysis.utils.math as math
 
 import matplotlib

@@ -2,7 +2,7 @@
 Tools for event displays from CNN mPMT dataset
 """
 import numpy as np
-from analysis.event_display.event_display import plot_event_2d, plot_event_3d
+from WatChMaL.analysis.event_display.event_display import plot_event_2d, plot_event_3d
 from WatChMaL.watchmal.dataset.cnn_mpmt.cnn_mpmt_dataset import CNNmPMTDataset
 from matplotlib.pyplot import cm
 import torch
