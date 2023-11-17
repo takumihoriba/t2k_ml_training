@@ -91,6 +91,8 @@ Once all trainings are done (if doing multiple folds), you can run some scripts 
 
 where comparisonFolder is the _outputPath_ where your training files were output. It should contain _training_stats.xml_ and all the other output files from training. The script will print out overall stats from training and create a sub-directory called _plots_ in _comparisonFolder_ showing some efficiency plots.
 
+If you would like to compare to FiTQun performance you need to add a fitqun_combine.hy file to this folder and then those results will be automatically added to the generated plots. 
+
 ### Evaluation
 
 You can run the evaluation step on an already trained network with options
