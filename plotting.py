@@ -136,7 +136,8 @@ def efficiency_plots(inputPath, arch_name, newest_directory, plot_output, label=
     muon_rejection = 0.961
     muon_efficiency = 1 - muon_rejection
     for r in run_result:
-        r.cut_with_constant_binned_efficiency(e_label, mu_label, 0.98557, binning = visible_energy_binning, select_labels = e_label)
+        r.cut_with_constant_binned_efficiency(e_label, mu_label, 0.98557, binning = visible_energy_binning, select_labels = e_label) # line where ml efficiency flat in vis energy is required
+        # instead used gloabl efficiency vs fixed effiiency, thows out bad ones? what is the cut needed on confidence or energy, cut on ml output, can force electrons to be really good, but bad muon rejection
 
     print(f"BAD EVENTS CHECK: {len(run_result[0]._softmaxes[(run_result[0]._softmaxes[:,1] > 0.5) & (labels == 0) & (ml_visible_energy > 900)])}")
 
