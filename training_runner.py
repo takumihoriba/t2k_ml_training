@@ -178,6 +178,7 @@ def end_training(settings, variable_list, variables):
 
 
 if args.doComparison:
+    print('A')
     compare_outputs(args.comparisonFolder)
 
 if args.doIndices:
@@ -219,12 +220,12 @@ if args.doQuickPlots:
     newest_directory = '/fast_scratch_2/aferreira/t2k/ml/data/oct20_combine_flatE/' # move stuff from good up
     #newest_directory = '/fast_scratch_2/aferreira/t2k/ml/data/oct20_combine_flatE/20092023-101855' 
     #newest_directory = max([os.path.join(args.plotInput,d) for d in os.listdir(args.plotInput)], key=os.path.getmtime)
-    
+    print(newest_directory)
     # create and save plots in specific training run file 
     plot_output = args.plotOutput + str(datetime.now()) + '/'
     os.mkdir(plot_output)
 
-    print(plot_output)
+    print(plot_output) # doesn't even get here! dont understand, not here that it goes
 
     # generate and save signal and background efficiency plots 
     #run = efficiency_plots(settings, arch_name, newest_directory, plot_output)
