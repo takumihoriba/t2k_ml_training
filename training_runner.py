@@ -224,6 +224,8 @@ if args.doQuickPlots:
     plot_output = args.plotOutput + str(datetime.now()) + '/'
     os.mkdir(plot_output)
 
+    print(plot_output)
+
     # generate and save signal and background efficiency plots 
     #run = efficiency_plots(settings, arch_name, newest_directory, plot_output)
     efficiency_plots(settings, arch_name, newest_directory, plot_output)

@@ -19,6 +19,7 @@ def get_cherenkov_threshold(label):
     return threshold_dict[label]
 
 def efficiency_plots(inputPath, arch_name, newest_directory, plot_output, label=None):
+    print('1')
 
     # retrieve test indices
     idx = np.array(sorted(np.load(str(newest_directory) + "/indices.npy")))
@@ -47,7 +48,7 @@ def efficiency_plots(inputPath, arch_name, newest_directory, plot_output, label=
     ml_cheThr = list(map(get_cherenkov_threshold, labels))
     ml_visible_energy = energies - ml_cheThr
 
-
+    print('2')
 
     do_fitqun=False
     if os.path.isfile(str(newest_directory) + "/fitqun_combine.hy"):
