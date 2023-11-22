@@ -216,7 +216,8 @@ if args.testParser:
 if args.doQuickPlots:
     
     _, arch_name = settings.getPlotInfo()
-    newest_directory = max([os.path.join(args.plotInput,d) for d in os.listdir(args.plotInput)], key=os.path.getmtime)
+    newest_directory = '/fast_scratch_2/aferreira/t2k/ml/data/oct20_combine_flatE/20092023-101855'
+    #newest_directory = max([os.path.join(args.plotInput,d) for d in os.listdir(args.plotInput)], key=os.path.getmtime)
     
     # create and save plots in specific training run file 
     plot_output = args.plotOutput + str(datetime.now()) + '/'
