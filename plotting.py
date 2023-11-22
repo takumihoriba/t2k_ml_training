@@ -64,6 +64,8 @@ def efficiency_plots(inputPath, arch_name, newest_directory, plot_output, label=
         fitqun_cheThr = list(map(get_cherenkov_threshold, fitqun_labels))
         fitqun_visible_energy = fitqun_energy - fitqun_cheThr
 
+        # by definition this should work? gone now which is good
+        # error persists which makes no sense
         intersect, comm1, comm2 = np.intersect1d(fitqun_hash, ml_hash, assume_unique=True, return_indices=True)
         print(f'intersect: {intersect}, comm1: {comm1}, comm2: {comm2}')
         print(len(comm1))
@@ -74,9 +76,12 @@ def efficiency_plots(inputPath, arch_name, newest_directory, plot_output, label=
         fitqun_az = (angles[:,1]*180/np.pi)[comm2]
         fitqun_polar = np.cos(angles[:,0])[comm2] 
         fitqun_towall = towall[comm2]
-        fitqun_discr = fitqun_discr[comm1]
-        fitqun_labels = fitqun_labels[comm1]
-        fitqun_idx = fitqun_idx[comm1]
+        fitqun_discr = fitqun_discr[comm2]
+        fitqun_labels = fitqun_labels[comm2]
+        fitqun_idx = fitqun_idx[comm2]
+        #fitqun_discr = fitqun_discr[comm1]
+        #fitqun_labels = fitqun_labels[comm1]
+        #fitqun_idx = fitqun_idx[comm1]
         fitqun_mom = momentum[comm2]
         fitqun_cheThr = list(map(get_cherenkov_threshold, fitqun_labels))
         fitqun_visible_energy = fitqun_matched_energies - fitqun_cheThr
