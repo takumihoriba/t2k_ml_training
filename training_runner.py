@@ -103,8 +103,13 @@ def init_training():
 
     settings = utils()
     settings.set_output_directory()
-    default_call = ["python", "WatChMaL/main.py", "--config-name=t2k_resnet_train"] 
-    #default_call = ["python", "WatChMaL/main.py", "--config-name=t2k_resnet_train_regression"] 
+    
+    if regression:
+        default_call = ["python", "WatChMaL/main.py", "--config-name=t2k_resnet_train"] 
+
+    else:
+        default_call = ["python", "WatChMaL/main.py", "--config-name=t2k_resnet_train_regression"] 
+    
     indicesFile = check_list_and_convert(settings.indicesFile)
     featureExtractor = check_list_and_convert(settings.featureExtractor)
     lr = check_list_and_convert(settings.lr)
@@ -115,8 +120,13 @@ def init_training():
     perm_output_path = settings.outputPath
     variable_list = ['indicesFile', 'learningRate', 'weightDecay', 'learningRateDecay', 'featureExtractor',  'stride', 'kernelSize']
     for x in itertools.product(indicesFile, lr, weightDecay, lr_decay, featureExtractor, stride, kernelSize):
-        default_call = ["python", "WatChMaL/main.py", "--config-name=t2k_resnet_train"] 
-        #default_call = ["python", "WatChMaL/main.py", "--config-name=t2k_resnet_train_regression"] 
+        
+        if regression:
+            default_call = ["python", "WatChMaL/main.py", "--config-name=t2k_resnet_train_regression"] 
+
+        else:
+            default_call = ["python", "WatChMaL/main.py", "--config-name=t2k_resnet_train"] 
+
         now = datetime.now()
         dt_string = now.strftime("%d%m%Y-%H%M%S")
         dt_string = '20092023-101855'
