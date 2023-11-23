@@ -206,5 +206,6 @@ def regression_analysis(dir_path='/fast_scratch_2/aferreira/t2k/ml/data/oct20_co
 
     this model seems to have wrong dims, going back to kernal and stride of 1
     '''
-    np.save(self.dirpath + "true_positions.npy", true_positions)
-    np.save(self.dirpath + "pred_positions.npy", pred_positions)
+    #np.save(self.dirpath + "true_positions.npy", true_positions)
+    #np.save(self.dirpath + "pred_positions.npy", pred_positions)
+    pass
