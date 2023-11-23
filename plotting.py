@@ -195,3 +195,10 @@ def efficiency_plots(inputPath, arch_name, newest_directory, plot_output, label=
 
     # remove comment for ROC curves of single run 
     return run_result[0]
+
+
+def regression_analysis():
+    '''
+    - scatter plot of pred vs true
+    - residual histogram
+    '''

@@ -61,7 +61,7 @@ args = parser.parse_args(['--training_input','foo','@args_training.txt',
                             '--training_output_path','foo','@args_training.txt'])
 logger = logging.getLogger('train')
 
-
+regression = True
 
 def training_runner(rank, settings, kernel_size, stride):
 
@@ -198,9 +198,10 @@ if args.doEvaluation:
     default_call = ["python", "WatChMaL/main.py", "--config-name=t2k_resnet_train"] 
     indicesFile = check_list_and_convert(settings.indicesFile)
     perm_output_path = settings.outputPath
-
     default_call = ["python", "WatChMaL/main.py", "--config-name=t2k_resnet_train"] 
 
+    if regression:
+        default_call = ["python", "WatChMaL/main.py", "--config-name=t2k_resnet_train_regression"] 
 
     settings.outputPath = args.evaluationInputDir
     default_call.append("hydra.run.dir=" +str(args.evaluationInputDir))
