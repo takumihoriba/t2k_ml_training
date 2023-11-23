@@ -135,9 +135,9 @@ def efficiency_plots(inputPath, arch_name, newest_directory, plot_output, label=
     # calculate the thresholds that reject 99.9% of muons and apply cut to all events
     muon_rejection = 0.961
     muon_efficiency = 1 - muon_rejection
-    for r in run_result:
-        eff = 0.98 #0.98 # 0.98557
-        r.cut_with_constant_binned_efficiency(e_label, mu_label, eff, binning = visible_energy_binning, select_labels = e_label)
+    #for r in run_result:
+    #    eff = 0.98 #0.98 # 0.98557
+    #    r.cut_with_constant_binned_efficiency(e_label, mu_label, eff, binning = visible_energy_binning, select_labels = e_label)
 
     print(f"BAD EVENTS CHECK: {len(run_result[0]._softmaxes[(run_result[0]._softmaxes[:,1] > 0.5) & (labels == 0) & (ml_visible_energy > 900)])}")
 
