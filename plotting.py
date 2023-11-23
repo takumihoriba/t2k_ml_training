@@ -67,7 +67,7 @@ def efficiency_plots(inputPath, arch_name, newest_directory, plot_output, label=
         intersect, comm1, comm2 = np.intersect1d(fitqun_hash, ml_hash, assume_unique=True, return_indices=True)
         print(f'intersect: {intersect}, comm1: {comm1}, comm2: {comm2}')
         print(len(comm1))
-        print(len(comm2))
+        print(len(comm2)) # not the same?
 
         fitqun_matched_energies = energies[comm2]
         fitqun_dwall = dwall[comm2]
@@ -185,6 +185,7 @@ def efficiency_plots(inputPath, arch_name, newest_directory, plot_output, label=
     mu_towall_fig.savefig(plot_output + 'mu_towall_efficiency.png', format='png')
 
     if do_fitqun:
+        print(ve_ax_e, ve_ax_fitqun_e, ve_ax_mu, ve_ax_fitqun_mu)
         plot_fitqun_comparison(plot_output, mom_ax_e, mom_ax_fitqun_e, mom_ax_mu, mom_ax_fitqun_mu, 'mom_combine', 'Truth Momentum [MeV]')
         plot_fitqun_comparison(plot_output, ve_ax_e, ve_ax_fitqun_e, ve_ax_mu, ve_ax_fitqun_mu, 've_combine', 'Truth Visible Energy [MeV]')
         plot_fitqun_comparison(plot_output, towall_ax_e, towall_ax_fitqun_e, towall_ax_mu, towall_ax_fitqun_mu, 'towall_combine', 'Towall [cm]')
