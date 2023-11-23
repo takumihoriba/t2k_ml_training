@@ -105,7 +105,7 @@ def efficiency_plots(inputPath, arch_name, newest_directory, plot_output, label=
     polar_binning = get_binning(np.cos(angles[:,0]), 10, -1, 1)
     az_binning = get_binning(angles[:,1]*180/np.pi, 10, -180, 180)
     mom_binning = get_binning(momentum, 9, minimum=100, maximum=1000)
-    visible_energy_binning = get_binning(ml_visible_energy, 10, minimum=0, maximum=1000)
+    visible_energy_binning = get_binning(ml_visible_energy, 5, minimum=0, maximum=1000) #get_binning(ml_visible_energy, 10, minimum=0, maximum=1000)
     dwall_binning = get_binning(dwall, 15, minimum=0, maximum=1600)
     towall_binning = get_binning(towall, 30, minimum=0, maximum=3000)
 
