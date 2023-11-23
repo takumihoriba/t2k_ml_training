@@ -1,4 +1,4 @@
---doEvaluation
+--doTraining
 --evaluationInputDir=/fast_scratch_2/aferreira/t2k/ml/data/oct20_combine_flatE/nov22_normed_regression/20092023-101855/
 --evaluationOutputDir=/fast_scratch_2/aferreira/t2k/ml/data/oct20_combine_flatE/nov22_normed_regression/20092023-101855/
 --comparisonFolder=/fast_scratch_2/aferreira/t2k/ml/data/oct20_combine_flatE/

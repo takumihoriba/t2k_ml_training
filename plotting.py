@@ -197,8 +197,14 @@ def efficiency_plots(inputPath, arch_name, newest_directory, plot_output, label=
     return run_result[0]
 
 
-def regression_analysis():
+def regression_analysis(dir_path='/fast_scratch_2/aferreira/t2k/ml/data/oct20_combine_flatE/nov22_normed_regression/20092023-101855/'):
     '''
     - scatter plot of pred vs true
     - residual histogram
+
+    call this in notebook for now
+
+    this model seems to have wrong dims, going back to kernal and stride of 1
     '''
+    np.save(self.dirpath + "true_positions.npy", true_positions)
+    np.save(self.dirpath + "pred_positions.npy", pred_positions)
