@@ -142,7 +142,7 @@ def efficiency_plots(inputPath, arch_name, newest_directory, plot_output, label=
     muon_rejection = 0.961 # change this from: 0.961 I suppose?
     muon_efficiency = 1 - muon_rejection
     for r in run_result:
-        eff = 0.98557 #0.5 #0.9 # 0.98557 used to be
+        eff = 0.9 #0.98557 #0.5 #0.9 # 0.98557 used to be
         r.cut_with_constant_binned_efficiency(e_label, mu_label, eff, binning = visible_energy_binning, select_labels = e_label) # line where ml efficiency flat in vis energy is required
         # instead used gloabl efficiency vs fixed effiiency, thows out bad ones? what is the cut needed on confidence or energy, cut on ml output, can force electrons to be really good, but bad muon rejection
 
@@ -163,7 +163,7 @@ def efficiency_plots(inputPath, arch_name, newest_directory, plot_output, label=
         e_ve_fig_fitqun, ve_ax_fitqun_e = plot_efficiency_profile(fitqun_run_result, fitqun_ve_binning, select_labels=e_label, x_label="fiTQun Visible energy [MeV]", y_label="fiTQun Electron Signal PID Efficiency [%]", errors=True, x_errors=False, label='fitqun'+label)
         e_towall_fig_fitqun, towall_ax_fitqun_e = plot_efficiency_profile(fitqun_run_result, fitqun_towall_binning, select_labels=e_label, x_label="Truth toWall [cm]", y_label="fiTQun Electron Signal PID Efficiency [%]", errors=True, x_errors=False, label='fitqun'+label)
         e_az_fig_fitqun, az_ax_fitqun_e = plot_efficiency_profile(fitqun_run_result, fitqun_az_binning, select_labels=e_label, x_label="Truth Azimuth [deg]", y_label="fiTQun Electron Signal PID Efficiency [%]", errors=True, x_errors=False, label='fitqun'+label)
-    plt.clf()
+    
     e_dwall_fig, dwall_ax = plot_efficiency_profile(run_result, dwall_binning, select_labels=e_label, x_label="Distance from Detector Wall [cm]", y_label="Electron Signal PID Efficiency [%]", errors=True, x_errors=False, label=label)
     #plt.clf()
     e_towall_fig, towall_ax_e = plot_efficiency_profile(run_result, towall_binning, select_labels=e_label, x_label="Distance to Wall Along Particle Direction [cm]  ", y_label="Electron Signal PID Efficiency [%]", errors=True, x_errors=False, label=label)
@@ -182,7 +182,7 @@ def efficiency_plots(inputPath, arch_name, newest_directory, plot_output, label=
         mu_ve_fig_fitqun, ve_ax_fitqun_mu = plot_efficiency_profile(fitqun_run_result, fitqun_ve_binning, select_labels=mu_label, x_label="fiTQun e Momentum", y_label="fiTQun Muon Background Miss-PID [%]", errors=True, x_errors=False, label=label)
         mu_towall_fig_fitqun, towall_ax_fitqun_mu = plot_efficiency_profile(fitqun_run_result, fitqun_towall_binning, select_labels=mu_label, x_label="Towall [cm]", y_label="fiTQun Muon Background Miss-PID [%]", errors=True, x_errors=False, label=label)
         mu_az_fig_fitqun, az_ax_fitqun_mu = plot_efficiency_profile(fitqun_run_result, fitqun_az_binning, select_labels=mu_label, x_label="Towall [cm]", y_label="fiTQun Muon Background Miss-PID [%]", errors=True, x_errors=False, label=label)
-    plt.clf()
+    
     mu_towall_fig, towall_ax_mu = plot_efficiency_profile(run_result, towall_binning, select_labels=mu_label, x_label="Distance to Wall Along Particle Direction [cm]  ", y_label="Muon Background Miss-PID [%]", errors=True, x_errors=False, label=label)
     #plt.clf()
     mu_dwall_fig, dwall_ax = plot_efficiency_profile(run_result, dwall_binning, select_labels=mu_label, x_label="Distance from Detector Wall [cm]", y_label="Muon Background Miss-PID [%]", errors=True, x_errors=False, label=label)
