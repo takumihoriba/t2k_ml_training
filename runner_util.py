@@ -329,6 +329,7 @@ class utils():
         """
         #make a dictionary to avoid ugly array of if statements. Add lambda so that functions only get used if called in classification_engine below
         #use lower() to ignore any mistakes in capital letter in config file
+        print('############\n############\n############\n############')
         print('use time 1:', self.useTime)
         classifier_dictionary = {'PassThrough'.lower(): lambda : PassThrough(), 'PointNetFullyConnected'.lower(): lambda : PointNetFullyConnected(num_inputs=256, num_classes=self.numClasses)}
         regression_dictionary = {'resnet18'.lower(): lambda : resnet18(num_input_channels=1+int(self.useTime), num_output_channels=self.numClasses, conv1_kernel = kernel_size, conv1_stride = stride), 'PointNetFeat'.lower(): lambda : PointNetFeat(k=4+int(self.useTime))}
@@ -363,6 +364,7 @@ class utils():
             data_config['use_time'] = self.useTime
         train_data_loader = {"batch_size": self.TrainBatchSize, "num_workers":4}
         val_data_loader = {"batch_size": self.ValBatchSize, "num_workers":4}
+        print('############\n############\n############\n############')
         print('use time 2:', self.useTime)
 
         #Set up indices of train/test/val datasets using TrainTestSplit and TesstValSplit from configuration settings
