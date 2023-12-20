@@ -65,13 +65,14 @@ def make_split_file(h5_file,train_val_test_split=[0.70,0.15], output_path='data/
     with h5py.File(h5_file, mode='r') as h5fw:
         # select indices only with 'keep_event' == True (if key exists), instead of keeping all events
         if 'keep_event' in h5fw.keys():
-            print(f'NEW! WARNING: Removing additional events to flatten truth visible energy distribution')
+            print('NEW! WARNING: Removing additional events to flatten truth visible energy distribution')
             keep_bool = np.array(h5fw['keep_event'])
 
             if one_class_only: # ONLY HERE FOR NOW
                 class_vals = np.ravel(h5fw['labels'])
                 #print('class vals shape:', class_vals.shape)
                 #print(class_vals[0]) #--> 1
+                print('NEW! WARNING: Keeping only label 0 for one class regression')
                 wanted_class = (class_vals == 0) # how to combine these?
                 indices_to_keep = np.where((keep_bool) & (wanted_class))[0] 
 
