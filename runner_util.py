@@ -18,6 +18,8 @@ from WatChMaL.watchmal.model.resnet import resnet18
 import torch
 from torch.utils.data.sampler import SubsetRandomSampler
 
+one_class_only == True
+
 def calc_dwall_cut(file,cut):
     temp_x = h5py.File(file,mode='r')['positions'][:,0,0]
     temp_y = h5py.File(file,mode='r')['positions'][:,0,1]
@@ -65,7 +67,11 @@ def make_split_file(h5_file,train_val_test_split=[0.70,0.15], output_path='data/
         if 'keep_event' in h5fw.keys():
             print(f'NEW! WARNING: Removing additional events to flatten truth visible energy distribution')
             keep_bool = np.array(h5fw['keep_event'])
-            indices_to_keep = np.where(keep_bool == True)[0] 
+
+            elif one_class_only: # ONLY HERE FOR NOW
+                class_vals = h5fw['label']
+                indices_to_keep = np.where(keep_bool == True and class_vals == 0)[0] 
+
         #Keep all    
         else:
             indices_to_keep = np.array(range(len(dwall_cut)))
