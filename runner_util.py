@@ -18,7 +18,7 @@ from WatChMaL.watchmal.model.resnet import resnet18
 import torch
 from torch.utils.data.sampler import SubsetRandomSampler
 
-one_class_only == True
+one_class_only = True
 
 def calc_dwall_cut(file,cut):
     temp_x = h5py.File(file,mode='r')['positions'][:,0,0]
