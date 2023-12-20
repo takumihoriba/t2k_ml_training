@@ -71,6 +71,7 @@ def make_split_file(h5_file,train_val_test_split=[0.70,0.15], output_path='data/
             if one_class_only: # ONLY HERE FOR NOW
                 class_vals = np.ravel(h5fw['labels'])
                 print('class vals shape:', class_vals.shape)
+                print(class_vals[0]) # not just a [0,1] list?
                 indices_to_keep = np.where(keep_bool == True and class_vals == 0)[0] 
 
             else:
