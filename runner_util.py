@@ -69,7 +69,7 @@ def make_split_file(h5_file,train_val_test_split=[0.70,0.15], output_path='data/
             keep_bool = np.array(h5fw['keep_event'])
 
             if one_class_only: # ONLY HERE FOR NOW
-                class_vals = h5fw['label']
+                class_vals = h5fw['labels']
                 indices_to_keep = np.where(keep_bool == True and class_vals == 0)[0] 
 
             else:
