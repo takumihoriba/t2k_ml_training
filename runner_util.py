@@ -72,8 +72,8 @@ def make_split_file(h5_file,train_val_test_split=[0.70,0.15], output_path='data/
                 class_vals = np.ravel(h5fw['labels'])
                 #print('class vals shape:', class_vals.shape)
                 #print(class_vals[0]) #--> 1
-                wanted_class = (class_vals == 0)
-                indices_to_keep = np.where(keep_bool == True and wanted_class == True)[0] 
+                wanted_class = (class_vals == 0) # how to combine these?
+                indices_to_keep = np.where((keep_bool) & (wanted_class))[0] 
 
             else:
                 indices_to_keep = np.where(keep_bool == True)[0] 
