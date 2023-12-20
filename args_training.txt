@@ -1,4 +1,4 @@
---doIndices
+--doTraining
 --numFolds=3
 --indicesInput=/fast_scratch_2/aferreira/t2k/ml/data/oct20_combine_flatE_oneClass/combine_combine.hy
 --indicesOutputPath=/fast_scratch_2/aferreira/t2k/ml/data/oct20_combine_flatE_oneClass/
