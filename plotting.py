@@ -24,6 +24,8 @@ def efficiency_plots(inputPath, arch_name, newest_directory, plot_output, label=
     idx = np.array(sorted(np.load(str(newest_directory) + "/indices.npy")))
     idx = np.unique(idx)
     softmax = np.array(np.load(str(newest_directory) + "/softmax.npy"))
+    positions_array = np.array(np.load(str(newest_directory) + "/pred_positions.npy"))
+    true_positions_array = np.array(np.load(str(newest_directory) + "/true_positions.npy"))
 
     # grab relevent parameters from hy file and only keep the values corresponding to those in the test set
     hy = h5py.File(inputPath, "r")
@@ -32,9 +34,11 @@ def efficiency_plots(inputPath, arch_name, newest_directory, plot_output, label=
     veto = np.array(hy['veto'])[idx].squeeze()
     energies = np.array(hy['energies'])[idx].squeeze()
     positions = np.array(hy['positions'])[idx].squeeze()
+    positions=true_positions_array.squeeze()
     directions = math.direction_from_angles(angles)
     rootfiles = np.array(hy['root_files'])[idx].squeeze()
     event_ids = np.array(hy['event_ids'])[idx].squeeze()
+    positions_ml = positions_array.squeeze()
     ml_hash = get_rootfile_eventid_hash(rootfiles, event_ids, fitqun=False)
 
     # calculate number of hits 
@@ -57,20 +61,24 @@ def efficiency_plots(inputPath, arch_name, newest_directory, plot_output, label=
     if os.path.isfile(str(newest_directory) + "/fitqun_combine.hy"):
         print("Running fiTQun")
         do_fitqun=True
-        fitqun_discr, fitqun_labels, fitqun_mom, fitqun_hash = read_fitqun_file(str(newest_directory) + "/fitqun_combine.hy")
+        fitqun_discr, fitqun_pi_discr, fitqun_labels, fitqun_mom, fitqun_hash, fitqun_e_1rpos, fitqun_mu_1rpos = read_fitqun_file(str(newest_directory) + "/fitqun_combine.hy")
         print(f'len idx: {len(idx)}, len fitqun: {len(fitqun_discr)}')
         fitqun_idx = np.array(range(len(fitqun_discr)))
         fitqun_hash = np.array(fitqun_hash)[fitqun_idx].squeeze()
         fitqun_discr = fitqun_discr[fitqun_idx].squeeze() 
         fitqun_labels = fitqun_labels[fitqun_idx].squeeze() 
         fitqun_mom = fitqun_mom[fitqun_idx].squeeze() 
+        fitqun_e_1rpos = np.reshape(fitqun_e_1rpos,(int(fitqun_e_1rpos.shape[0]/3), 3))
+        fitqun_e_1rpos = fitqun_e_1rpos[fitqun_idx].squeeze() 
+        fitqun_mu_1rpos = np.reshape(fitqun_mu_1rpos,(int(fitqun_mu_1rpos.shape[0]/3), 3))
+        fitqun_mu_1rpos = fitqun_mu_1rpos[fitqun_idx].squeeze() 
         fitqun_energy = math.energy_from_momentum(fitqun_mom, fitqun_labels)
         fitqun_cheThr = list(map(get_cherenkov_threshold, fitqun_labels))
         fitqun_visible_energy = fitqun_energy - fitqun_cheThr
 
         #Get the ids that are in both ML and fitqun samples
         intersect, comm1, comm2 = np.intersect1d(fitqun_hash, ml_hash, assume_unique=True, return_indices=True)
-        print(f'intersect: {intersect}, comm1: {comm1}, comm2: {comm2}')
+        print(f'intersect: {intersect.shape}, comm1: {comm1.shape}, comm2: {comm2.shape}')
         print(len(comm1))
         print(len(comm2))
 
@@ -80,9 +88,12 @@ def efficiency_plots(inputPath, arch_name, newest_directory, plot_output, label=
         fitqun_polar = np.cos(angles[:,0])[comm2] 
         fitqun_towall = towall[comm2]
         fitqun_discr = fitqun_discr[comm1]
+        fitqun_pi_discr = fitqun_pi_discr[comm1]
         fitqun_labels = fitqun_labels[comm1]
-        fitqun_idx = fitqun_idx[comm1]
+        fitqun_idx = fitqun_idx[comm2]
         fitqun_mom = momentum[comm2]
+        fitqun_e_1rpos = fitqun_e_1rpos[comm1]
+        fitqun_mu_1rpos = fitqun_mu_1rpos[comm1]
         fitqun_cheThr = list(map(get_cherenkov_threshold, fitqun_labels))
         fitqun_visible_energy = fitqun_matched_energies - fitqun_cheThr
 
@@ -91,6 +102,10 @@ def efficiency_plots(inputPath, arch_name, newest_directory, plot_output, label=
         print(f"fitqun e- avg towall > 100): {1-np.sum(temp[fitqun_labels[fitqun_towall > 100]==1])/len(temp[fitqun_labels[fitqun_towall > 100]==1])}")
         print(f"fitqun mu- avg (towall > 100): {1-np.sum(temp[fitqun_labels[fitqun_towall > 100]==0])/len(temp[fitqun_labels[fitqun_towall > 100]==0])}")
         
+
+    print(f"e 1r pos: {fitqun_e_1rpos}")
+    print(f"positions_ml: {positions_ml[comm2]}")
+    print(f"positions true: {positions[comm2]}")
 
 
 
@@ -103,13 +118,13 @@ def efficiency_plots(inputPath, arch_name, newest_directory, plot_output, label=
     nhit_cut = nhits > 0 #25
     towall_cut = towall > 100
     # veto_cut = (veto == 0)
-    hy_electrons = (labels == 0)
-    hy_muons = (labels == 2)
+    hy_electrons = (labels == 1)
+    hy_muons = (labels == 0)
     basic_cuts = ((hy_electrons | hy_muons) & nhit_cut & towall_cut)
 
     # set class labels and decrease values within labels to match either 0 or 1 
-    e_label = [0]
-    mu_label = [2]
+    e_label = [1]
+    mu_label = [0]
     #labels = [x - 1 for x in labels]
 
     # get the bin indices and edges for parameters
@@ -123,6 +138,7 @@ def efficiency_plots(inputPath, arch_name, newest_directory, plot_output, label=
     # create watchmal classification object to be used as runs for plotting the efficiency relative to event angle  
     stride1 = newest_directory
     run_result = [WatChMaLClassification(stride1, 'test', labels, idx, basic_cuts, color="blue", linestyle='-')]
+    print(f"UNIQUE IN LABLES: {np.unique(fitqun_labels, return_counts=True)}")
 
     
     # for single runs and then can plot the ROC curves with it 
@@ -141,8 +157,11 @@ def efficiency_plots(inputPath, arch_name, newest_directory, plot_output, label=
         fitqun_polar_binning = get_binning(fitqun_polar, 10, minimum=-1, maximum=1)
         fitqun_run_result = [WatChMaLClassification(stride1, 'test', fitqun_labels, fitqun_idx, fitqun_basic_cuts, color="blue", linestyle='-')]
         (fitqun_run_result[0]).selection = fitqun_basic_cuts
-        print(f'fitqun_discr: {fitqun_discr}')
         fitqun_run_result[0].cut = fitqun_discr.astype(np.bool)
+
+        fitqun_pi_run_result = [WatChMaLClassification(stride1, 'test', fitqun_labels, fitqun_idx, fitqun_basic_cuts, color="blue", linestyle='-')]
+        (fitqun_pi_run_result[0]).selection = fitqun_basic_cuts
+        fitqun_pi_run_result[0].cut = fitqun_pi_discr.astype(np.bool)
 
     fig_roc, ax_roc = plot_rocs(run_result, e_label, mu_label, selection=basic_cuts, x_label="Electron Tagging Efficiency", y_label="Muon Rejection",
               legend='best', mode='rejection', add_fitqun=False)
@@ -152,7 +171,7 @@ def efficiency_plots(inputPath, arch_name, newest_directory, plot_output, label=
     muon_rejection = 0.961
     muon_efficiency = 1 - muon_rejection
     for r in run_result:
-        r.cut_with_constant_binned_efficiency(e_label, mu_label, 0.8, binning = visible_energy_binning, select_labels = e_label)
+        r.cut_with_constant_binned_efficiency(e_label, mu_label, 0.98, binning = visible_energy_binning, select_labels = e_label)
 
 
     # plot signal efficiency against true momentum, dwall, towall, zenith, azimuth
@@ -204,7 +223,7 @@ def efficiency_plots(inputPath, arch_name, newest_directory, plot_output, label=
         plot_fitqun_comparison(plot_output, mom_ax_e, mom_ax_fitqun_e, mom_ax_mu, mom_ax_fitqun_mu, 'mom_combine', 'Truth Momentum [MeV]')
         plot_fitqun_comparison(plot_output, ve_ax_e, ve_ax_fitqun_e, ve_ax_mu, ve_ax_fitqun_mu, 've_combine', 'Truth Visible Energy [MeV]')
         plot_fitqun_comparison(plot_output, towall_ax_e, towall_ax_fitqun_e, towall_ax_mu, towall_ax_fitqun_mu, 'towall_combine', 'Towall [cm]')
-        plot_fitqun_comparison(plot_output, az_ax_e, az_ax_fitqun_e, az_ax_mu, az_ax_fitqun_mu, 'az_combine', 'Truth Azimuth [deg]')
+        #plot_fitqun_comparison(plot_output, az_ax_e, az_ax_fitqun_e, az_ax_mu, az_ax_fitqun_mu, 'az_combine', 'Truth Azimuth [deg]')
 
 
 
