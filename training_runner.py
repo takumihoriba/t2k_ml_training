@@ -1,8 +1,8 @@
 #from WatChMaL.analysis.plot_utils import disp_learn_hist, disp_learn_hist_smoothed, compute_roc, plot_roc
 
 import argparse
-import debugpy
-import h5py
+#import debugpy
+#import h5py
 import logging
 import os  
 import csv
@@ -210,7 +210,7 @@ if args.doEvaluation:
     default_call.append("tasks.train.restore_best_state= true")
     print(default_call)
     subprocess.call(default_call)
-    end_training(settings)
+    #end_training(settings)
     
 if args.testParser:
     pass

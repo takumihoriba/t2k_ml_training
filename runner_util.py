@@ -59,17 +59,22 @@ def make_split_file(h5_file,train_val_test_split=[0.70,0.15], output_path='data/
     #indices_to_keep = np.array(range(len(dwall_cut)))[np.logical_and(np.logical_and(dwall_cut,~h5py.File(h5_file,mode='r')['veto'][:]), np.ravel(h5py.File(h5_file,mode='r')['primary_charged_range']) != -999)]
     #indices_to_keep = np.array(range(len(dwall_cut)))[np.logical_and(np.logical_and(dwall_cut,np.logical_and(~h5py.File(h5_file,mode='r')['veto'][:], ~h5py.File(h5_file,mode='r')['decay_electron_exists'][:])), np.ravel(h5py.File(h5_file,mode='r')['primary_charged_range']) != -999)]
     #indices_to_keep = np.array(range(len(dwall_cut)))[np.logical_and(dwall_cut, ~h5py.File(h5_file,mode='r')['veto'][:])]
+    #Keep only electrons
+    indices_to_keep = np.array(range(len(dwall_cut)))[np.where(np.ravel(h5py.File(h5_file,mode='r')['labels'])==1)]
+    print(indices_to_keep)
     
     with h5py.File(h5_file, mode='r') as h5fw:
         # select indices only with 'keep_event' == True (if key exists), instead of keeping all events
         if 'keep_event' in h5fw.keys():
             print(f'NEW! WARNING: Removing additional events to flatten truth visible energy distribution')
             keep_bool = np.array(h5fw['keep_event'])
+            #indices_to_keep = np.where(np.logical_and(keep_bool == True, np.ravel(h5py.File(h5_file,mode='r')['labels'])==2))[0] 
             indices_to_keep = np.where(keep_bool == True)[0] 
         #Keep all    
         else:
             indices_to_keep = np.array(range(len(dwall_cut)))
             
+    
     print(f'indices to keep: {len(indices_to_keep)}')
     #Based on root files, divide indices into train/val/test
     length_rootfiles = len(unique_root_files)

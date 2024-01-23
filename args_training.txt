@@ -1,4 +1,4 @@
---doComparison
+--doTraining
 --numFolds=7
 --indicesInput=/fast_scratch_1/fcormier/t2k/ml/skdetsim/oct20_eMuPosPion_0dwallCut_flat_1/combine_combine.hy
 --indicesOutputPath=/fast_scratch_1/fcormier/t2k/ml/skdetsim/oct20_eMuPosPion_0dwallCut_flat_1/
