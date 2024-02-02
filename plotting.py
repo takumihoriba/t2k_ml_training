@@ -212,8 +212,6 @@ def network_diagram():
     currently just generates this for resnet 101 but should work with all models
 
     can be run locally, does not require significant compute
-
-    I have put resulting resnet_onnx.png in t2k_ml_training/data/
     '''
     torch_model = resnet101(num_input_channels=2, num_output_channels=2)
     # input size outputted from first forward pass of resnet
