@@ -14,6 +14,15 @@ import analysis.utils.math as math
 import matplotlib
 from matplotlib import pyplot as plt
 
+import torch
+import torch.onnx
+from WatChMaL.watchaml.model.resnet import resnet101
+
+import corner
+from scipy.optimize import curve_fit
+
+dummy_path = '/fast_scratch_2/aferreira/t2k/ml/data/oct20_combine_flatE_oneClass/dec20_label0_justRegression_resnet101/20092023-101855/'
+
 def get_cherenkov_threshold(label):
     threshold_dict = {0: 160., 1:0.8, 2:211.715}
     return threshold_dict[label]
@@ -195,3 +204,182 @@ def efficiency_plots(inputPath, arch_name, newest_directory, plot_output, label=
     return run_result[0]
 
 
+def plot_network_diagram():
+    '''
+    code to produce onnx file from network architecture that can then
+    be uploaded to https://netron.app/ in order to get network diagram
+    
+    the default input size is likey wrong since plot doesn't look quite right
+
+    currently just generates this for resnet 101 but should work with all models
+    '''
+    torch_model = resnet101()
+    torch_input = torch.randn(256, 2, 198, 150) # the issue is likely with this size
+    torch.onnx.export(torch_model, torch_input, 'reset.onnx', opset_version=11)
+
+def un_normalize(data, x_bounds=(-1600,1600), y_bounds=(-1600,1600), z_bounds=(-1600,1600)):
+    '''
+    putting normalized data for x,y,z values from regression model back into natural units
+    '''
+    bounds = [x_bounds, y_bounds, z_bounds]
+    for i in range(3):
+        data[i] = (data[i])*bounds[i][1]
+        
+    return data
+
+def gaussian(x, a, mean, sigma):
+    return a * np.exp(-((x - mean)**2 / (2 * sigma**2)))
+
+def regression_analysis(dirpath=dummy_path, combine=True):
+    '''
+    saves 2 plots for each of the 3 axes (x,y,z):
+    1) scatter plot of predicted vs true position
+    2) histogram of redsiduals with guassian fit
+
+    if combine = True this is done for both classes in the same
+    plot but if combine = False there is a set of plots for each class
+
+    residuals corner plot is only outputted when combine = True
+
+    this is meant to be called in a notebook. if you would like to call it
+    in the command line you likely wanna change plt.show() to save figure instead
+    '''
+    plt.style.use('ggplot')
+
+    # read in true positions and model predicted positions
+    true_positions = un_normalize(np.load(dirpath + "true_positions.npy"))
+    pred_positions = un_normalize(np.load(dirpath + "pred_positions.npy"))
+
+    # read in true class and model predicted class
+    true_class = np.load(dirpath + "true_class.npy")
+    pred_class = np.load(dirpath + "pred_class.npy")
+
+    # just defining some basics
+    vertex_axis = ['X', 'Y', 'Z']
+    line = np.linspace(-1600, 1600, 10) 
+    residual_lst, residual_lst_wcut = [], []
+
+    # loop over X, then Y, then Z and show in different colours
+    for i in range(len(vertex_axis)): 
+        color = plt.rcParams["axes.prop_cycle"].by_key()["color"][i]
+
+        if not combine: 
+            labels = "muon", "electron"
+
+            true_pos = {}
+            pred_pos = {}
+
+            true_pos['0'] = true_positions[true_class==0]
+            true_pos['1'] = true_positions[true_class==1]
+            pred_pos['0'] = pred_positions[true_class==0]
+            pred_pos['1'] = pred_positions[true_class==1]
+
+            pred_mis_id = {}
+            pred_cor_id = {}
+            true_mis_id = {}
+            true_cor_id = {}
+
+            pred_mis_id['0'] = pred_pos['0'][np.around(pred_class[true_class==0],0) != 0] 
+            pred_cor_id['0'] = pred_pos['0'][np.around(pred_class[true_class==0],0) == 0]
+            pred_mis_id['1'] = pred_pos['1'][np.around(pred_class[true_class==1],0) != 1]
+            pred_cor_id['1'] = pred_pos['1'][np.around(pred_class[true_class==1],0) == 1]
+            true_mis_id['0'] = true_pos['0'][np.around(pred_class[true_class==0],0) != 0] 
+            true_cor_id['0'] = true_pos['0'][np.around(pred_class[true_class==0],0) == 0]
+            true_mis_id['1'] = true_pos['1'][np.around(pred_class[true_class==1],0) != 1]
+            true_cor_id['1'] = true_pos['1'][np.around(pred_class[true_class==1],0) == 1]
+
+            for j in range(len(labels)):
+
+                plt.figure(figsize=(5,5))
+                plt.scatter(true_pos[str(j)][:,i], pred_pos[str(j)][:,i], alpha=0.05, s=0.1, color=color, label='correct classification')
+                plt.scatter(true_mis_id[str(j)][:,i], pred_mis_id[str(j)][:,i], alpha=0.5, s=0.1, color='black', label='incorrect classification')
+                plt.plot(line, line, '--', color='black', alpha=0.5)
+
+                plt.xlim(-2000,2000) 
+                plt.ylim(-2000,2000)
+                
+                plt.title(f'Event Vertex for {vertex_axis[i]} Axis - {labels[j]}')
+                plt.xlabel('True Position [cm]')
+                plt.ylabel('Predicted Position [cm]')
+                plt.legend()
+                plt.show()
+
+                # calculate residuals 
+                residuals = true_pos[str(j)][:,i] - pred_pos[str(j)][:,i] 
+
+                # create cut that we are interested in this value +/- from 0
+                cut = 1600
+                residuals_cut = []
+                for r in range(len(residuals)):
+                    if -cut < residuals[r] <  cut:
+                        residuals_cut.append(residuals[r])
+
+                yhist, xhist, _ = plt.hist(residuals_cut, bins=50, alpha=0.7, color=color)
+                popt, pcov = curve_fit(gaussian, (xhist[1:]+xhist[:-1])/2, yhist, bounds=(-np.inf, np.inf), p0=[40, 0, 70])    
+                perr = np.sqrt(np.diag(pcov))
+                plt.plot(x, gaussian(x, *popt), alpha=1, color='black', label='guassian fit')
+
+                # round numbers
+                mu = round(popt[1], 2)
+                mu_uncert = round(perr[1], 2)
+                std = round(popt[2], 2)
+                std_uncert = round(perr[2], 2)
+
+                plt.text(0.08, 0.82, '$\mu$ = {} $\pm$ {} [cm] \n\n$\sigma$ = {} $\pm$ {} [cm]'.format(mu, mu_uncert, std, std_uncert), fontsize=10, transform = plt.gca().transAxes, bbox=dict(facecolor='white', edgecolor='black', boxstyle='round,pad=1'))
+
+                plt.xlim(-cut, cut)
+
+                plt.title(f'Event Vertex for {vertex_axis[i]} Axis - {labels[j]} (correct and incorrect predicted class)')
+                plt.xlabel('true - predicted [cm]')
+                plt.ylabel('count')
+                plt.show()
+
+        else:
+
+            plt.figure(figsize=(5,5))
+            plt.scatter(true_positions[:,i], pred_positions[:,i], alpha=0.05, s=0.1, color=color)
+            plt.plot(line, line, '--', color='black', alpha=0.5)
+
+            plt.xlim(-2000,2000) 
+            plt.ylim(-2000,2000)
+            
+            plt.title(f'Event Vertex for {vertex_axis[i]} Axis')
+            plt.xlabel('True Position [cm]')
+            plt.ylabel('Predicted Position [cm]')
+            plt.legend()
+            plt.show()
+
+            residuals = true_positions[:,i] - pred_positions[:,i] 
+            cut = 1600
+            residuals_cut = [] 
+            for r in range(len(residuals)):
+                if -cut < residuals[r] <  cut:
+                    residuals_cut.append(residuals[r])
+
+            yhist, xhist, _ = plt.hist(residuals_cut, bins=50, alpha=0.7, color=color)
+            popt, pcov = curve_fit(gaussian, (xhist[1:]+xhist[:-1])/2, yhist, bounds=(-np.inf, np.inf), p0=[40, 0, 70])    
+            perr = np.sqrt(np.diag(pcov))
+
+            plt.plot(line, gaussian(line, *popt), alpha=1, color='black', label='guassian fit')
+
+            # round numbers
+            mu = round(popt[1], 2)
+            mu_uncert = round(perr[1], 2)
+            std = round(popt[2], 2)*-1
+            std_uncert = round(perr[2], 2)
+
+            plt.text(0.08, 0.82, '$\mu$ = {} $\pm$ {} [cm] \n\n$\sigma$ = {} $\pm$ {} [cm]'.format(mu, mu_uncert, std, std_uncert), fontsize=10, transform = plt.gca().transAxes, bbox=dict(facecolor='white', edgecolor='black', boxstyle='round,pad=1'))
+
+            plt.xlim(-cut, cut)
+
+            plt.title(f'Event Vertex for {vertex_axis[i]} Axis')
+            plt.xlabel('true - predicted [cm]')
+            plt.ylabel('count')
+            plt.show()
+
+            residual_lst.append(residuals)
+            residual_lst_wcut.append(residuals_cut)
+
+            residuals = np.array(residual_lst)
+            figure = corner.corner(residuals.T, bins=50,  labels=['X', 'Y', 'Z'], range=[(-cut,cut), (-cut,cut), (-cut,cut)]) 
+            plt.show()
