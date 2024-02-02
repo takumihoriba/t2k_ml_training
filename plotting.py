@@ -16,9 +16,9 @@ from matplotlib import pyplot as plt
 
 import torch
 import torch.onnx
-from WatChMaL.watchaml.model.resnet import resnet101
+from WatChMaL.watchmal.model.resnet import resnet101
 
-import corner
+from corner import corner
 from scipy.optimize import curve_fit
 
 dummy_path = '/fast_scratch_2/aferreira/t2k/ml/data/oct20_combine_flatE_oneClass/dec20_label0_justRegression_resnet101/20092023-101855/'
@@ -204,18 +204,24 @@ def efficiency_plots(inputPath, arch_name, newest_directory, plot_output, label=
     return run_result[0]
 
 
-def plot_network_diagram():
+def network_diagram():
     '''
-    code to produce onnx file from network architecture that can then
+    code to produce onnx file of model network architecture that can then
     be uploaded to https://netron.app/ in order to get network diagram
     
     the default input size is likey wrong since plot doesn't look quite right
 
     currently just generates this for resnet 101 but should work with all models
+
+    can be run locally, does not require significant compute
+
+    I have put resulting resnet_onnx.png in t2k_ml_training/data/
     '''
-    torch_model = resnet101()
-    torch_input = torch.randn(256, 2, 198, 150) # the issue is likely with this size
-    torch.onnx.export(torch_model, torch_input, 'reset.onnx', opset_version=11)
+    torch_model = resnet101(num_input_channels=2, num_output_channels=2)
+    # input size outputted from first forward pass of resnet
+    # (but with batch size of 256 instead of 1)
+    torch_input = torch.randn(1, 2, 198, 150) 
+    torch.onnx.export(torch_model, torch_input, 'resnet.onnx', opset_version=11)
 
 def un_normalize(data, x_bounds=(-1600,1600), y_bounds=(-1600,1600), z_bounds=(-1600,1600)):
     '''
@@ -247,8 +253,16 @@ def regression_analysis(dirpath=dummy_path, combine=True):
     plt.style.use('ggplot')
 
     # read in true positions and model predicted positions
-    true_positions = un_normalize(np.load(dirpath + "true_positions.npy"))
-    pred_positions = un_normalize(np.load(dirpath + "pred_positions.npy"))
+    true_positions = np.load(dirpath + "true_positions.npy")
+    pred_positions = np.load(dirpath + "pred_positions.npy")
+
+    # put data into natural units
+    tp, pp = [], []
+    for p, t in zip(pred_positions, true_positions):
+        tp.append(un_normalize(t))
+        pp.append(un_normalize(p))
+    true_positions = np.array(tp)
+    pred_positions = np.array(pp)
 
     # read in true class and model predicted class
     true_class = np.load(dirpath + "true_class.npy")
