@@ -1,7 +1,5 @@
 import numpy as np
-
 import os
-
 import h5py
 
 from analysis.classification import WatChMaLClassification
@@ -21,7 +19,7 @@ from WatChMaL.watchmal.model.resnet import resnet101
 from corner import corner
 from scipy.optimize import curve_fit
 
-dummy_path = '/fast_scratch_2/aferreira/t2k/ml/data/oct20_combine_flatE_oneClass/dec20_label0_justRegression_resnet101/20092023-101855/'
+dummy_path = '/fast_scratch_2/aferreira/t2k/ml/data/oct20_combine_flatE/nov29_normed_regression_shared/20092023-101855/'
 
 def get_cherenkov_threshold(label):
     threshold_dict = {0: 160., 1:0.8, 2:211.715}
@@ -247,6 +245,8 @@ def regression_analysis(dirpath=dummy_path, combine=True):
 
     residuals corner plot is only outputted when combine = True
 
+    uncertainties are likely calculated wrong
+
     this is meant to be called in a notebook. if you would like to call it
     in the command line you likely wanna change plt.show() to save figure instead
     '''
@@ -270,7 +270,7 @@ def regression_analysis(dirpath=dummy_path, combine=True):
 
     # just defining some basics
     vertex_axis = ['X', 'Y', 'Z']
-    line = np.linspace(-1600, 1600, 10) 
+    line = np.linspace(-1600, 1600, 10000) 
     residual_lst, residual_lst_wcut = [], []
 
     # loop over X, then Y, then Z and show in different colours
@@ -306,7 +306,7 @@ def regression_analysis(dirpath=dummy_path, combine=True):
 
                 plt.figure(figsize=(5,5))
                 plt.scatter(true_pos[str(j)][:,i], pred_pos[str(j)][:,i], alpha=0.05, s=0.1, color=color, label='correct classification')
-                plt.scatter(true_mis_id[str(j)][:,i], pred_mis_id[str(j)][:,i], alpha=0.5, s=0.1, color='black', label='incorrect classification')
+                plt.scatter(true_mis_id[str(j)][:,i], pred_mis_id[str(j)][:,i], alpha=0.2, s=0.1, color='black', label='incorrect classification')
                 plt.plot(line, line, '--', color='black', alpha=0.5)
 
                 plt.xlim(-2000,2000) 
@@ -331,7 +331,7 @@ def regression_analysis(dirpath=dummy_path, combine=True):
                 yhist, xhist, _ = plt.hist(residuals_cut, bins=50, alpha=0.7, color=color)
                 popt, pcov = curve_fit(gaussian, (xhist[1:]+xhist[:-1])/2, yhist, bounds=(-np.inf, np.inf), p0=[40, 0, 70])    
                 perr = np.sqrt(np.diag(pcov))
-                plt.plot(x, gaussian(x, *popt), alpha=1, color='black', label='guassian fit')
+                plt.plot(line, gaussian(line, *popt), alpha=1, color='black', label='guassian fit')
 
                 # round numbers
                 mu = round(popt[1], 2)
@@ -360,7 +360,6 @@ def regression_analysis(dirpath=dummy_path, combine=True):
             plt.title(f'Event Vertex for {vertex_axis[i]} Axis')
             plt.xlabel('True Position [cm]')
             plt.ylabel('Predicted Position [cm]')
-            plt.legend()
             plt.show()
 
             residuals = true_positions[:,i] - pred_positions[:,i] 
@@ -379,7 +378,7 @@ def regression_analysis(dirpath=dummy_path, combine=True):
             # round numbers
             mu = round(popt[1], 2)
             mu_uncert = round(perr[1], 2)
-            std = round(popt[2], 2)*-1
+            std = round(popt[2], 2)
             std_uncert = round(perr[2], 2)
 
             plt.text(0.08, 0.82, '$\mu$ = {} $\pm$ {} [cm] \n\n$\sigma$ = {} $\pm$ {} [cm]'.format(mu, mu_uncert, std, std_uncert), fontsize=10, transform = plt.gca().transAxes, bbox=dict(facecolor='white', edgecolor='black', boxstyle='round,pad=1'))
@@ -394,6 +393,7 @@ def regression_analysis(dirpath=dummy_path, combine=True):
             residual_lst.append(residuals)
             residual_lst_wcut.append(residuals_cut)
 
-            residuals = np.array(residual_lst)
-            figure = corner.corner(residuals.T, bins=50,  labels=['X', 'Y', 'Z'], range=[(-cut,cut), (-cut,cut), (-cut,cut)]) 
-            plt.show()
+    if combine:
+        residuals = np.array(residual_lst)
+        figure = corner(residuals.T, bins=50,  labels=['X', 'Y', 'Z'], range=[(-cut,cut), (-cut,cut), (-cut,cut)]) 
+        plt.show()
