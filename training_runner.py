@@ -48,7 +48,7 @@ parser.add_argument("--indicesOutputPath", help="run training")
 parser.add_argument("--plotOutput", help="run training")
 parser.add_argument("--training_input", help="where training files are")
 parser.add_argument("--training_output_path", help="where to dump training output")
-arser.add_argument("--regression", help="True to run electon, muon regression", action="store_true")
+parser.add_argument("--regression", help="True to run electon, muon regression", action="store_true")
 args = parser.parse_args(['--training_input','foo','@args_training.txt',
                             '--plotInput','foo','@args_training.txt',
                             '--comparisonFolder','foo','@args_training.txt',
@@ -84,7 +84,7 @@ def training_runner(rank, settings, kernel_size, stride):
     #Initialize training configuration, classifier and dataset for engine training 
     settings.set_output_directory()
     settings.initTrainConfig()
-    settings.initClassifier(kernel_size, stride)
+    settings.initClassifier(kernel_size, stride, regression=args.regression)
     settings.initOptimizer()
     #If labels do not start at 0, saves offset so that they are changed during training
     settings.checkLabels()
