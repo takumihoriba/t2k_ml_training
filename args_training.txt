@@ -1,4 +1,7 @@
---doTraining
+--doEvaluation
+--doRegression
+--evaluationInputDir=/fast_scratch/aferreira/t2k/ml/training/resnet_sep22_emu_skdetsim_bugFix_0dwallCut_1/06022024-211752/
+--evaluationOutputDir=/fast_scratch/aferreira/t2k/ml/training/resnet_sep22_emu_skdetsim_bugFix_0dwallCut_1/
 --numFolds=3
 --indicesInput=/fast_scratch_2/aferreira/t2k/ml/data/oct5_combine/_combine.hy
 --indicesOutputPath=/fast_scratch_2/aferreira/t2k/ml/data/oct5_combine/
