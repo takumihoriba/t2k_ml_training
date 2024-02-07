@@ -48,7 +48,7 @@ parser.add_argument("--indicesOutputPath", help="run training")
 parser.add_argument("--plotOutput", help="run training")
 parser.add_argument("--training_input", help="where training files are")
 parser.add_argument("--training_output_path", help="where to dump training output")
-parser.add_argument("--regression", help="True to run electon, muon regression", action="store_true")
+parser.add_argument("--doRegression", help="True to run electon, muon regression", action="store_true")
 args = parser.parse_args(['--training_input','foo','@args_training.txt',
                             '--plotInput','foo','@args_training.txt',
                             '--comparisonFolder','foo','@args_training.txt',
@@ -58,10 +58,8 @@ args = parser.parse_args(['--training_input','foo','@args_training.txt',
                             '--evaluationInputDir','foo','@args_training.txt',
                             '--evaluationOutputDir','foo','@args_training.txt',
                             '--numFolds','foo','@args_training.txt',
-                            '--regression', 'foo','@args_training.txt',
                             '--training_output_path','foo','@args_training.txt'])
 logger = logging.getLogger('train')
-
 
 
 def training_runner(rank, settings, kernel_size, stride):
@@ -91,7 +89,7 @@ def training_runner(rank, settings, kernel_size, stride):
 
     data_config, train_data_loader, val_data_loader, train_indices, test_indices, val_indices = settings.initDataset(rank)
     model = nn.parallel.DistributedDataParallel(settings.classification_engine, device_ids=[settings.gpuNumber])
-    engine = ClassifierEngine(model, rank, settings.gpuNumber, settings.outputPath)
+    engine = ClassifierEngine(model, rank, settings.gpuNumber, settings.outputPath, args.doRegression)
 
     engine.configure_data_loaders(data_config, train_data_loader, val_data_loader, settings.multiGPU, 0, train_indices, test_indices, val_indices, settings)
     engine.configure_optimizers(settings)
@@ -105,8 +103,8 @@ def init_training():
     settings = utils()
     settings.set_output_directory()
 
-    if args.regression:
-        default_call = ["python", "WatChMaL/main.py", "--config-name=t2k_resnet_train_regression"] 
+    if args.doRegression:
+        default_call = ["python", "WatChMaL/main.py", "--config-name=t2k_regression_resnet_train"] 
     else:
         default_call = ["python", "WatChMaL/main.py", "--config-name=t2k_resnet_train"] 
     
@@ -120,8 +118,8 @@ def init_training():
     perm_output_path = settings.outputPath
     variable_list = ['indicesFile', 'learningRate', 'weightDecay', 'learningRateDecay', 'featureExtractor',  'stride', 'kernelSize']
     for x in itertools.product(indicesFile, lr, weightDecay, lr_decay, featureExtractor, stride, kernelSize):
-        if args.regression:
-            default_call = ["python", "WatChMaL/main.py", "--config-name=t2k_resnet_train_regression"] 
+        if args.doRegression:
+            default_call = ["python", "WatChMaL/main.py", "--config-name=t2k_regression_resnet_train"] 
         else:
             default_call = ["python", "WatChMaL/main.py", "--config-name=t2k_resnet_train"]
         now = datetime.now()
@@ -134,8 +132,8 @@ def init_training():
         default_call.append("tasks.train.optimizers.weight_decay="+str(x[2]))
         default_call.append("tasks.train.scheduler.gamma="+str(x[3]))
         default_call.append("model.feature_extractor._target_="+str(x[4]))
-        default_call.append("model.feature_extractor.stride="+str(x[5]))
-        default_call.append("model.feature_extractor.kernelSize="+str(x[6]))
+        #default_call.append("model.feature_extractor.stride="+str(x[5]))
+        #default_call.append("model.feature_extractor.kernelSize="+str(x[6]))
         default_call.append("hydra.run.dir=" +str(settings.outputPath))
         default_call.append("dump_path=" +str(settings.outputPath))
         print(default_call)
@@ -204,8 +202,8 @@ if args.doEvaluation:
     indicesFile = check_list_and_convert(settings.indicesFile)
     perm_output_path = settings.outputPath
 
-    if args.regression:
-        default_call = ["python", "WatChMaL/main.py", "--config-name=t2k_resnet_train_regression"] 
+    if args.doRegression:
+        default_call = ["python", "WatChMaL/main.py", "--config-name=t2k_regression_resnet_train"] 
     else:
         default_call = ["python", "WatChMaL/main.py", "--config-name=t2k_resnet_train"]
 

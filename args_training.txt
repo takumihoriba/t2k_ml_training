@@ -2,4 +2,3 @@
 --numFolds=3
 --indicesInput=/fast_scratch_2/aferreira/t2k/ml/data/oct5_combine/_combine.hy
 --indicesOutputPath=/fast_scratch_2/aferreira/t2k/ml/data/oct5_combine/
---regression=False
