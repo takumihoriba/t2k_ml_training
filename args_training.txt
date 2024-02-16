@@ -1,9 +1,9 @@
---doTraining
---numFolds=7
---indicesInput=/fast_scratch_1/fcormier/t2k/ml/skdetsim/oct20_eMuPosPion_0dwallCut_flat_1/combine_combine.hy
---indicesOutputPath=/fast_scratch_1/fcormier/t2k/ml/skdetsim/oct20_eMuPosPion_0dwallCut_flat_1/
---evaluationInputDir=/fast_scratch/fcormier/t2k/ml/training/resnet_sep22_emu_skdetsim_bugFix_0dwallCut_1/20092023-101855/
---evaluationOutputDir=/fast_scratch/fcormier/t2k/ml/training/resnet_sep22_emu_skdetsim_bugFix_0dwallCut_1/20092023-101855/
+--doIndices
+--numFolds=20
+--indicesInput=/fast_scratch_2/fcormier/t2k/jan28_electronsOnly_5M//digi_combine.hy
+--indicesOutputPath=/fast_scratch_2/fcormier/t2k/jan28_electronsOnly_5M//
+--evaluationInputDir=/fast_scratch/fcormier/t2k/ml/training/resnet_feb15_reg_watchmalMerge_fixed_1/15022024-132444/
+--evaluationOutputDir=/fast_scratch/fcormier/t2k/ml/training/resnet_feb15_reg_watchmalMerge_fixed_1/15022024-132444/
 --comparisonFolder=/fast_scratch/fcormier/t2k/ml/training/oct20_aferreira_combine_flatE/
 --plotInput=/fast_scratch/fcormier/t2k/ml/training/resnet_emu_weightDecay_sep13_test_1/
 --plotOutput=output/resnet_emu_weightDecay_sep13_test_1/

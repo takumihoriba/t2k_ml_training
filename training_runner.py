@@ -16,7 +16,6 @@ import torch
 import torch.multiprocessing as mp
 import torch.nn as nn
 
-from WatChMaL.watchmal.engine.engine_classifier import ClassifierEngine
 from analysis.classification import WatChMaLClassification
 from analysis.classification import plot_efficiency_profile
 from analysis.utils.plotting import plot_legend
@@ -89,12 +88,7 @@ def training_runner(rank, settings, kernel_size, stride):
 
     data_config, train_data_loader, val_data_loader, train_indices, test_indices, val_indices = settings.initDataset(rank)
     model = nn.parallel.DistributedDataParallel(settings.classification_engine, device_ids=[settings.gpuNumber])
-    engine = ClassifierEngine(model, rank, settings.gpuNumber, settings.outputPath)
 
-    engine.configure_data_loaders(data_config, train_data_loader, val_data_loader, settings.multiGPU, 0, train_indices, test_indices, val_indices, settings)
-    engine.configure_optimizers(settings)
-    settings.save_options(settings.outputPath, 'training_settings')
-    engine.train(settings)
 
 def init_training():
     """Reads util_config.ini, constructs command to run 1 training
@@ -122,10 +116,10 @@ def init_training():
         default_call.append("data.split_path="+x[0])
         default_call.append("tasks.train.optimizers.lr="+str(x[1]))
         default_call.append("tasks.train.optimizers.weight_decay="+str(x[2]))
-        default_call.append("tasks.train.scheduler.gamma="+str(x[3]))
-        default_call.append("model.feature_extractor._target_="+str(x[4]))
-        default_call.append("model.feature_extractor.stride="+str(x[5]))
-        default_call.append("model.feature_extractor.kernelSize="+str(x[6]))
+        #default_call.append("tasks.train.scheduler.gamma="+str(x[3]))
+        default_call.append("model._target_="+str(x[4]))
+        default_call.append("model.stride="+str(x[5]))
+        default_call.append("model.kernelSize="+str(x[6]))
         default_call.append("hydra.run.dir=" +str(settings.outputPath))
         default_call.append("dump_path=" +str(settings.outputPath))
         print(default_call)
@@ -195,19 +189,16 @@ if args.doEvaluation:
     settings = utils()
     settings.outputPath = args.evaluationOutputDir
     settings.set_output_directory()
-    default_call = ["python", "WatChMaL/main.py", "--config-name=t2k_resnet_train"] 
+    default_call = ["python", "WatChMaL/main.py", "--config-name=t2k_resnet_eval"] 
     indicesFile = check_list_and_convert(settings.indicesFile)
     perm_output_path = settings.outputPath
 
-    default_call = ["python", "WatChMaL/main.py", "--config-name=t2k_resnet_train"] 
+    default_call = ["python", "WatChMaL/main.py", "--config-name=t2k_resnet_eval"] 
 
 
     settings.outputPath = args.evaluationInputDir
     default_call.append("hydra.run.dir=" +str(args.evaluationInputDir))
-    default_call.append("engine.restore_path=" +str(args.evaluationInputDir))
     default_call.append("dump_path=" +str(args.evaluationOutputDir))
-    default_call.append("tasks.train.epochs=" +str(0))
-    default_call.append("tasks.train.restore_best_state= true")
     print(default_call)
     subprocess.call(default_call)
     #end_training(settings)

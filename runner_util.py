@@ -10,7 +10,6 @@ import numpy as np
 
 from sklearn.model_selection import KFold, train_test_split
 
-from WatChMaL.watchmal.model.classifier import Classifier, PassThrough, PointNetFullyConnected, ResNetFullyConnected
 from WatChMaL.watchmal.model.pointnet import PointNetFeat
 from WatChMaL.watchmal.model.resnet import resnet18
 #from WatChMaL.watchmal.dataset.t2k.t2k_dataset import PointNetT2KDataset, T2KCNNDataset
@@ -60,19 +59,37 @@ def make_split_file(h5_file,train_val_test_split=[0.70,0.15], output_path='data/
     #indices_to_keep = np.array(range(len(dwall_cut)))[np.logical_and(np.logical_and(dwall_cut,np.logical_and(~h5py.File(h5_file,mode='r')['veto'][:], ~h5py.File(h5_file,mode='r')['decay_electron_exists'][:])), np.ravel(h5py.File(h5_file,mode='r')['primary_charged_range']) != -999)]
     #indices_to_keep = np.array(range(len(dwall_cut)))[np.logical_and(dwall_cut, ~h5py.File(h5_file,mode='r')['veto'][:])]
     #Keep only electrons
-    indices_to_keep = np.array(range(len(dwall_cut)))[np.where(np.ravel(h5py.File(h5_file,mode='r')['labels'])==1)]
-    print(indices_to_keep)
+    #indices_to_keep = np.array(range(len(dwall_cut)))[np.where(np.ravel(h5py.File(h5_file,mode='r')['labels'])==1)]
+    indices_to_keep = np.array(range(len(dwall_cut)))
+    #print(indices_to_keep)
     
     with h5py.File(h5_file, mode='r') as h5fw:
         # select indices only with 'keep_event' == True (if key exists), instead of keeping all events
         if 'keep_event' in h5fw.keys():
             print(f'NEW! WARNING: Removing additional events to flatten truth visible energy distribution')
+
+            events_hits_index = np.append(h5fw['event_hits_index'], h5fw['hit_pmt'].shape[0])
+            print(events_hits_index)
+            nhits = (events_hits_index[indices_to_keep+1] - events_hits_index[indices_to_keep]).squeeze()
+
             keep_bool = np.array(h5fw['keep_event'])
-            #indices_to_keep = np.where(np.logical_and(keep_bool == True, np.ravel(h5py.File(h5_file,mode='r')['labels'])==2))[0] 
-            indices_to_keep = np.where(keep_bool == True)[0] 
+            indices_to_keep = np.where(np.logical_and(np.logical_and(keep_bool == True, np.ravel(h5py.File(h5_file,mode='r')['labels'])==1), nhits > 1000))[0] 
+            print(nhits)
+            #indices_to_keep = np.where(keep_bool == True)[0] 
         #Keep all    
         else:
+            #indices_to_keep = np.where(np.ravel(h5py.File(h5_file,mode='r')['labels'])==1)
             indices_to_keep = np.array(range(len(dwall_cut)))
+            events_hits_index = np.append(h5fw['event_hits_index'], h5fw['hit_pmt'].shape[0])
+            #print(events_hits_index)
+            nhits = (events_hits_index[indices_to_keep+1] - events_hits_index[indices_to_keep]).squeeze()
+            #print(f'itk length: {len(indices_to_keep)}')
+            print(np.ravel(h5py.File(h5_file,mode='r')['labels'])==1)
+            print(nhits > 100)
+            indices_to_keep = np.where(np.logical_and(np.ravel(h5py.File(h5_file,mode='r')['labels'])==1, nhits > 100))
+            print(indices_to_keep)
+            #print(f'itk length after: {indices_to_keep[0].shape}')
+            #print(np.unique(nhits > 1000, return_counts=True))
             
     
     print(f'indices to keep: {len(indices_to_keep)}')
@@ -128,6 +145,21 @@ def make_split_file(h5_file,train_val_test_split=[0.70,0.15], output_path='data/
             test_indices = test_indices[np.isin(test_indices, indices_to_keep)]
             val_indices = val_indices[np.isin(val_indices, indices_to_keep)]
 
+
+            train_x = h5py.File(h5_file,mode='r')['positions'][:,:,0]
+            train_mean_x = np.mean(np.abs(train_x[train_indices]))
+            train_std_x = np.std(train_x[train_indices])
+
+            val_x = h5py.File(h5_file,mode='r')['positions'][:,:,0]
+            val_mean_x = np.mean(np.abs(val_x[val_indices]))
+            val_std_x = np.std(val_x[val_indices])
+
+            test_x = h5py.File(h5_file,mode='r')['positions'][:,:,0]
+            test_mean_x = np.mean(np.abs(test_x[test_indices]))
+            test_std_x = np.std(test_x[test_indices])
+
+            print(f'train x: {train_mean_x}({train_std_x}), val x: {val_mean_x}({val_std_x}), test x: {test_mean_x}({test_std_x})')
+
             labels = h5py.File(h5_file,mode='r')['labels']
 
 
@@ -135,8 +167,9 @@ def make_split_file(h5_file,train_val_test_split=[0.70,0.15], output_path='data/
             print(np.unique(np.ravel(labels)[train_indices], return_counts=True))
             print(np.unique(np.ravel(labels)[val_indices],return_counts=True))
             print(np.unique(np.ravel(labels)[test_indices],return_counts=True))
+            #print(f'TOTAL: {np.unique(np.ravel(labels)[train_indices], return_counts=True)[1][0] + np.unique(np.ravel(labels)[val_indices],return_counts=True)[1][0] + np.unique(np.ravel(labels)[test_indices],return_counts=True)[1][0]}')
             print(output_path)
-            np.savez(output_path + 'train_val_test_nFolds'+str(nfolds)+'_fold'+str(i)+'.npz',
+            np.savez(output_path + 'train_val_test_gt100Hits_nFolds'+str(nfolds)+'_fold'+str(i)+'.npz',
                     test_idxs=test_indices, val_idxs=val_indices, train_idxs=train_indices)
 
 
