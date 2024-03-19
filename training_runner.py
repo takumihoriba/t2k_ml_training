@@ -22,13 +22,13 @@ from analysis.utils.plotting import plot_legend
 import analysis.utils.math as math
 from runner_util import utils, train_config, make_split_file
 from analysis.utils.binning import get_binning
-from compare_outputs import compare_outputs
+#from compare_outputs import compare_outputs
 
 from plotting import fitqun_regression_results
 
 from torchmetrics import AUROC, ROC
 
-from lxml import etree
+#from lxml import etree
 
 import hydra
 
@@ -101,6 +101,7 @@ def init_training():
     settings.set_output_directory()
     default_call = ["python", "WatChMaL/main.py", "--config-name=t2k_resnet_train"] 
     indicesFile = check_list_and_convert(settings.indicesFile)
+    inputPath = [os.getenv('SLURM_TMPDIR') + '/digi_combine.hy'] 
     featureExtractor = check_list_and_convert(settings.featureExtractor)
     lr = check_list_and_convert(settings.lr)
     lr_decay = check_list_and_convert(settings.lr_decay)
@@ -108,21 +109,22 @@ def init_training():
     stride = check_list_and_convert(settings.stride)
     kernelSize = check_list_and_convert(settings.kernel)
     perm_output_path = settings.outputPath
-    variable_list = ['indicesFile', 'learningRate', 'weightDecay', 'learningRateDecay', 'featureExtractor',  'stride', 'kernelSize']
-    for x in itertools.product(indicesFile, lr, weightDecay, lr_decay, featureExtractor, stride, kernelSize):
+    variable_list = ['indicesFile', 'inputPath', 'learningRate', 'weightDecay', 'learningRateDecay', 'featureExtractor',  'stride', 'kernelSize']
+    for x in itertools.product(indicesFile, inputPath, lr, weightDecay, lr_decay, featureExtractor, stride, kernelSize):
         default_call = ["python", "WatChMaL/main.py", "--config-name=t2k_resnet_train"] 
         now = datetime.now()
         dt_string = now.strftime("%d%m%Y-%H%M%S")
         #dt_string = '20092023-101855'
         settings.outputPath = perm_output_path+'/'+dt_string+'/'
-        print(f'TRAINING WITH\n indices file: {x[0]}\n learning rate: {x[1]}\n learning rate decay: {x[3]}\n weight decay: {x[2]}\n feature extractor: {x[4]}\n output path: {settings.outputPath}')
+        print(f'TRAINING WITH\n input file: {x[1]} \n indices file: {x[0]}\n learning rate: {x[2]}\n learning rate decay: {x[4]}\n weight decay: {x[3]}\n feature extractor: {x[5]}\n output path: {settings.outputPath}')
         default_call.append("data.split_path="+x[0])
-        default_call.append("tasks.train.optimizers.lr="+str(x[1]))
-        default_call.append("tasks.train.optimizers.weight_decay="+str(x[2]))
-        default_call.append("tasks.train.scheduler.gamma="+str(x[3]))
-        default_call.append("model._target_="+str(x[4]))
-        default_call.append("model.stride="+str(x[5]))
-        default_call.append("model.kernelSize="+str(x[6]))
+        default_call.append("data.dataset.h5file="+x[1])
+        default_call.append("tasks.train.optimizers.lr="+str(x[2]))
+        default_call.append("tasks.train.optimizers.weight_decay="+str(x[3]))
+        default_call.append("tasks.train.scheduler.gamma="+str(x[4]))
+        default_call.append("model._target_="+str(x[5]))
+        default_call.append("model.stride="+str(x[6]))
+        default_call.append("model.kernelSize="+str(x[7]))
         default_call.append("hydra.run.dir=" +str(settings.outputPath))
         default_call.append("dump_path=" +str(settings.outputPath))
         print(default_call)
