@@ -24,6 +24,8 @@ from runner_util import utils, train_config, make_split_file
 from analysis.utils.binning import get_binning
 from compare_outputs import compare_outputs
 
+from plotting import fitqun_regression_results
+
 from torchmetrics import AUROC, ROC
 
 from lxml import etree
@@ -32,6 +34,7 @@ import hydra
 
 parser = argparse.ArgumentParser(fromfile_prefix_chars='@')
 parser.add_argument("--doTraining", help="run training", action="store_true")
+parser.add_argument("--doFiTQun", help="run fitqun results", action="store_true")
 parser.add_argument("--doEvaluation", help="run evaluation on already trained network", action="store_true")
 parser.add_argument("--doComparison", help="run comparison", action="store_true")
 parser.add_argument("--doQuickPlots", help="Make performance plots", action="store_true")
@@ -116,7 +119,7 @@ def init_training():
         default_call.append("data.split_path="+x[0])
         default_call.append("tasks.train.optimizers.lr="+str(x[1]))
         default_call.append("tasks.train.optimizers.weight_decay="+str(x[2]))
-        #default_call.append("tasks.train.scheduler.gamma="+str(x[3]))
+        default_call.append("tasks.train.scheduler.gamma="+str(x[3]))
         default_call.append("model._target_="+str(x[4]))
         default_call.append("model.stride="+str(x[5]))
         default_call.append("model.kernelSize="+str(x[6]))
@@ -184,6 +187,9 @@ if args.doIndices:
 
 if args.doTraining:
     init_training() 
+
+if args.doFiTQun:
+    fitqun_regression_results()
 
 if args.doEvaluation:
     settings = utils()

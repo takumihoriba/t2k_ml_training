@@ -73,7 +73,7 @@ def make_split_file(h5_file,train_val_test_split=[0.70,0.15], output_path='data/
             nhits = (events_hits_index[indices_to_keep+1] - events_hits_index[indices_to_keep]).squeeze()
 
             keep_bool = np.array(h5fw['keep_event'])
-            indices_to_keep = np.where(np.logical_and(np.logical_and(keep_bool == True, np.ravel(h5py.File(h5_file,mode='r')['labels'])==1), nhits > 1000))[0] 
+            indices_to_keep = np.where(np.logical_and(np.logical_and(keep_bool == True, np.ravel(h5py.File(h5_file,mode='r')['labels'])==1), nhits > 200))[0] 
             print(nhits)
             #indices_to_keep = np.where(keep_bool == True)[0] 
         #Keep all    
@@ -85,14 +85,14 @@ def make_split_file(h5_file,train_val_test_split=[0.70,0.15], output_path='data/
             nhits = (events_hits_index[indices_to_keep+1] - events_hits_index[indices_to_keep]).squeeze()
             #print(f'itk length: {len(indices_to_keep)}')
             print(np.ravel(h5py.File(h5_file,mode='r')['labels'])==1)
-            print(nhits > 100)
-            indices_to_keep = np.where(np.logical_and(np.ravel(h5py.File(h5_file,mode='r')['labels'])==1, nhits > 100))
+            print(nhits > 200)
+            indices_to_keep = np.where(np.logical_and(np.ravel(h5py.File(h5_file,mode='r')['labels'])==1, nhits > 200))
             print(indices_to_keep)
             #print(f'itk length after: {indices_to_keep[0].shape}')
             #print(np.unique(nhits > 1000, return_counts=True))
             
     
-    print(f'indices to keep: {len(indices_to_keep)}')
+    print(f'indices to keep: {len(indices_to_keep[0])}')
     #Based on root files, divide indices into train/val/test
     length_rootfiles = len(unique_root_files)
 
@@ -169,7 +169,7 @@ def make_split_file(h5_file,train_val_test_split=[0.70,0.15], output_path='data/
             print(np.unique(np.ravel(labels)[test_indices],return_counts=True))
             #print(f'TOTAL: {np.unique(np.ravel(labels)[train_indices], return_counts=True)[1][0] + np.unique(np.ravel(labels)[val_indices],return_counts=True)[1][0] + np.unique(np.ravel(labels)[test_indices],return_counts=True)[1][0]}')
             print(output_path)
-            np.savez(output_path + 'train_val_test_gt100Hits_nFolds'+str(nfolds)+'_fold'+str(i)+'.npz',
+            np.savez(output_path + 'train_val_test_gt200Hits_nFolds'+str(nfolds)+'_fold'+str(i)+'.npz',
                     test_idxs=test_indices, val_idxs=val_indices, train_idxs=train_indices)
 
 

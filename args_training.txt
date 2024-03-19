@@ -1,11 +1,11 @@
---doIndices
+--doTraining
 --numFolds=20
 --indicesInput=/fast_scratch_2/fcormier/t2k/jan28_electronsOnly_5M//digi_combine.hy
 --indicesOutputPath=/fast_scratch_2/fcormier/t2k/jan28_electronsOnly_5M//
---evaluationInputDir=/fast_scratch/fcormier/t2k/ml/training/resnet_feb15_reg_watchmalMerge_fixed_1/15022024-132444/
---evaluationOutputDir=/fast_scratch/fcormier/t2k/ml/training/resnet_feb15_reg_watchmalMerge_fixed_1/15022024-132444/
---comparisonFolder=/fast_scratch/fcormier/t2k/ml/training/oct20_aferreira_combine_flatE/
---plotInput=/fast_scratch/fcormier/t2k/ml/training/resnet_emu_weightDecay_sep13_test_1/
+--evaluationInputDir=/data/fcormier/training/resnet_mar11_reg_electrons_dir_g200Hits_scheduler_5M_1/11032024-135348/
+--evaluationOutputDir=/data/fcormier/training/resnet_mar11_reg_electrons_dir_g200Hits_scheduler_5M_1/11032024-135348/
+--comparisonFolder=/fast_scratch/fcormier/t2k/ml/training/resnet_nov7_eMuPosPions_0dwall_1M_flat_1/
+--plotInput=/fast_scratch/fcormier/t2k/ml/training/oct20_aferreira_combine_flatE/
 --plotOutput=output/resnet_emu_weightDecay_sep13_test_1/
 --training_input=data/training_paths.txt
 --training_output_path=/fast_scratch/jsholdice/train_out/
