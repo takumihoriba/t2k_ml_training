@@ -9,13 +9,19 @@ import h5py
 import numpy as np
 
 from sklearn.model_selection import KFold, train_test_split
+from scipy.optimize import curve_fit
 
-from WatChMaL.watchmal.model.pointnet import PointNetFeat
-from WatChMaL.watchmal.model.resnet import resnet18
+from math import log
+
+import analysis.utils.math as math
+
+
+#from WatChMaL.watchmal.model.pointnet import PointNetFeat
+#from WatChMaL.watchmal.model.resnet import resnet18
 #from WatChMaL.watchmal.dataset.t2k.t2k_dataset import PointNetT2KDataset, T2KCNNDataset
 
-import torch
-from torch.utils.data.sampler import SubsetRandomSampler
+#import torch
+#from torch.utils.data.sampler import SubsetRandomSampler
 
 def calc_dwall_cut(file,cut):
     temp_x = h5py.File(file,mode='r')['positions'][:,0,0]
@@ -23,6 +29,44 @@ def calc_dwall_cut(file,cut):
     temp_r = np.sqrt(np.add(np.square(np.array(temp_x)), np.square(np.array(temp_y))))
     temp_z = np.abs(np.array(h5py.File(file,mode='r')['positions'][:,0,2]))
     return np.logical_and(temp_r < (1690-cut), temp_z < (1850-cut))
+
+
+def mom_from_energies(energies, labels):
+    energies = np.ravel(energies)
+    print(energies.shape)
+    print(labels.shape)
+    momenta = np.ones(len(energies), dtype=np.double)*-1
+    print(momenta[labels==1].shape)
+    momenta[labels == 1] = np.sqrt(np.subtract(np.multiply(energies[labels==1], energies[labels==1]),np.multiply(momenta[labels==1]*0.5,momenta[labels==1]*0.5)))
+    #momenta = np.sqrt(np.multiply(energies, energies) - np.multiply(momenta*0.5,momenta*0.5))
+    momenta[labels == 0] = np.sqrt(np.multiply(energies[labels==0], energies[labels==0]) - np.multiply(momenta[labels==0]*105.7,momenta[labels==0]*105.7))
+    momenta[labels == 2] = np.sqrt(np.multiply(energies[labels==2], energies[labels==2]) - np.multiply(momenta[labels==2]*139.584,momenta[labels==2]*139.584))
+    return momenta
+
+def lq(x, a, b, c):
+    return a+b*x+c*x*x
+
+def mom_to_range_dicts():
+    muon_mom = [47.04, 56.16, 68.02, 85.09, 100.3, 152.7, 176.4, 221.8, 286.8, 391.7, 494.5, 899.5, 1101., 1502., 2103.]
+    muon_range = [0.6998, 1.279, 2.392, 4.782, 7.696, 22.61, 31.24, 49.68, 78.94, 129.1, 179.6, 377.1, 473.2, 661.1, 935.3]
+
+    (a_mu, b_mu, c_mu), pcov_mu = curve_fit(lq, muon_mom, muon_range, p0=[0.05, 0.05,0.05])
+
+    electron_mom = [1.00E+01, 1.25E+01, 1.50E+01, 1.75E+01, 2.00E+01, 2.50E+01, 3.00E+01, 3.50E+01, 4.00E+01, 4.50E+01, 5.00E+01, 5.50E+01, 6.00E+01, 7.00E+01, 8.00E+01, 9.00E+01, 1.00E+02, 1.25E+02, 
+                    1.50E+02, 1.75E+02, 2.00E+02, 2.50E+02, 3.00E+02, 3.50E+02, 4.00E+02, 4.50E+02, 5.00E+02, 5.50E+02, 6.00E+02, 7.00E+02, 8.00E+02, 9.00E+02, 1.00E+03]
+    electron_range = [4.98E+00, 6.12E+00, 7.22E+00, 8.29E+00, 9.32E+00, 1.13E+01, 1.32E+01, 1.50E+01, 1.67E+01, 1.83E+01, 1.98E+01, 2.13E+01, 2.28E+01, 2.55E+01, 2.80E+01, 3.04E+01, 3.26E+01, 
+                      3.76E+01, 4.20E+01, 4.60E+01, 4.96E+01, 5.58E+01, 6.12E+01, 6.58E+01, 7.00E+01, 7.37E+01, 7.71E+01, 8.01E+01, 8.30E+01, 8.81E+01, 9.26E+01, 9.66E+01, 1.00E+02]
+
+    (a_el, b_el, c_el), pcov_el = curve_fit(lq, electron_mom, electron_range, p0=[0.05, 0.05,0.05])
+
+
+    return [(a_mu, b_mu, c_mu), (a_el, b_el, c_el)]
+
+#For electron in water
+#Energy in MeV, returns shower depth in cm
+def electron_shower_depth(energy):
+    
+    return 36*(np.log(energy/10.))/(log(2)) 
 
 
 def make_split_file(h5_file,train_val_test_split=[0.70,0.15], output_path='data/', seed=0, nfolds=3):
@@ -62,9 +106,32 @@ def make_split_file(h5_file,train_val_test_split=[0.70,0.15], output_path='data/
     #indices_to_keep = np.array(range(len(dwall_cut)))[np.where(np.ravel(h5py.File(h5_file,mode='r')['labels'])==1)]
     indices_to_keep = np.array(range(len(dwall_cut)))
     #print(indices_to_keep)
+    fully_contained=True
     
     with h5py.File(h5_file, mode='r') as h5fw:
         # select indices only with 'keep_event' == True (if key exists), instead of keeping all events
+        if fully_contained:
+            print("Running fully contained")
+            labels = np.array(h5fw['labels'])
+            energies = np.squeeze(h5fw['energies'])
+            momenta = mom_from_energies(np.array(energies), labels)
+            ranges = np.zeros(momenta.shape[0])
+            e_shower_depth = np.zeros(momenta.shape[0])
+            range_fit_params = mom_to_range_dicts()
+            ranges[(labels==0) & (labels==2)] = lq(momenta[(labels==0) & (labels==1)], range_fit_params[0][0], range_fit_params[0][1], range_fit_params[0][2])
+            ranges[(labels==1)] = lq(momenta[(labels==1)], range_fit_params[1][0], range_fit_params[1][1], range_fit_params[1][2])
+            e_shower_depth[(labels==1)] = electron_shower_depth(energies[labels==1])
+            ranges[labels==1] = np.maximum(ranges[labels==1], e_shower_depth[labels==1])
+            towall = math.towall(np.squeeze(h5fw['positions']), np.array(h5fw['angles']), tank_axis = 2)
+
+
+            towall_compare = towall > 2*ranges
+
+            #print(np.unique(towall_compare, return_counts=True))
+
+            #print(f"towall: {towall[towall_compare==False]}")
+            #print(f"range: {ranges[towall_compare==False]}")
+            #print(f"momenta: {momenta[towall_compare==False]}")
         if 'keep_event' in h5fw.keys():
             print(f'NEW! WARNING: Removing additional events to flatten truth visible energy distribution')
 
@@ -73,10 +140,19 @@ def make_split_file(h5_file,train_val_test_split=[0.70,0.15], output_path='data/
             nhits = (events_hits_index[indices_to_keep+1] - events_hits_index[indices_to_keep]).squeeze()
 
             keep_bool = np.array(h5fw['keep_event'])
-            indices_to_keep = np.where(np.logical_and(np.logical_and(keep_bool == True, np.ravel(h5py.File(h5_file,mode='r')['labels'])==1), nhits > 1000))[0] 
+            if fully_contained:
+                indices_to_keep = np.where(np.logical_and(np.logical_and(towall_compare == True, keep_bool==True),labels==1), nhits > 200)[0] 
+            else:
+                indices_to_keep = np.where(np.logical_and(np.logical_and(keep_bool == True, labels==1), nhits > 200))[0] 
             print(nhits)
             #indices_to_keep = np.where(keep_bool == True)[0] 
+        elif fully_contained:
+            events_hits_index = np.append(h5fw['event_hits_index'], h5fw['hit_pmt'].shape[0])
+            print(events_hits_index)
+            nhits = (events_hits_index[indices_to_keep+1] - events_hits_index[indices_to_keep]).squeeze()
+            indices_to_keep = np.where(np.logical_and(np.logical_and(towall_compare==True, labels==1), nhits>200))
         #Keep all    
+
         else:
             #indices_to_keep = np.where(np.ravel(h5py.File(h5_file,mode='r')['labels'])==1)
             indices_to_keep = np.array(range(len(dwall_cut)))
@@ -86,7 +162,7 @@ def make_split_file(h5_file,train_val_test_split=[0.70,0.15], output_path='data/
             #print(f'itk length: {len(indices_to_keep)}')
             print(np.ravel(h5py.File(h5_file,mode='r')['labels'])==1)
             print(nhits > 100)
-            indices_to_keep = np.where(np.logical_and(np.ravel(h5py.File(h5_file,mode='r')['labels'])==1, nhits > 100))
+            indices_to_keep = np.where(np.logical_and(np.ravel(h5py.File(h5_file,mode='r')['labels'])==1, nhits > 200))
             print(indices_to_keep)
             #print(f'itk length after: {indices_to_keep[0].shape}')
             #print(np.unique(nhits > 1000, return_counts=True))
@@ -169,7 +245,7 @@ def make_split_file(h5_file,train_val_test_split=[0.70,0.15], output_path='data/
             print(np.unique(np.ravel(labels)[test_indices],return_counts=True))
             #print(f'TOTAL: {np.unique(np.ravel(labels)[train_indices], return_counts=True)[1][0] + np.unique(np.ravel(labels)[val_indices],return_counts=True)[1][0] + np.unique(np.ravel(labels)[test_indices],return_counts=True)[1][0]}')
             print(output_path)
-            np.savez(output_path + 'train_val_test_gt100Hits_nFolds'+str(nfolds)+'_fold'+str(i)+'.npz',
+            np.savez(output_path + 'train_val_test_gt200Hits_FCTEST_nFolds'+str(nfolds)+'_fold'+str(i)+'.npz',
                     test_idxs=test_indices, val_idxs=val_indices, train_idxs=train_indices)
 
 
@@ -217,6 +293,9 @@ class utils():
                 dt_string = now.strftime("%d%m%Y-%H%M%S")
                 output_file = config[arch][key]
                 self.outputPath = output_file
+            elif 'ConfigName'.lower() in key.lower():
+                config_name = config[arch][key]
+                self.configName = config_name
             elif 'NetworkArchitecture'.lower() in key.lower():
                 self.arch = config[arch][key]
             elif 'Classifier'.lower() in key.lower():
@@ -231,6 +310,8 @@ class utils():
                 self.doClassification = config[arch].getboolean(key)
             elif 'DoRegression'.lower() in key.lower():
                 self.doRegression = config[arch].getboolean(key)
+            elif 'batchSystem'.lower() in key.lower():
+                self.batchSystem = config[arch].getboolean(key)
             elif 'UseGPU'.lower() in key.lower():
                 self.useGPU = config[arch].getboolean(key)
             elif 'GPUNumber'.lower() in key.lower():
@@ -338,6 +419,7 @@ class utils():
     def set_output_directory(self):
         """Makes an output file as given in the arguments
         """
+        print(f"Making output direction: {self.outputPath}")
         if not(os.path.exists(self.outputPath) and os.path.isdir(self.outputPath)):
             try:
                 os.makedirs(self.outputPath)

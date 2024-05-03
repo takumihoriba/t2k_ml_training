@@ -12,9 +12,6 @@ import itertools
 
 import subprocess
 
-import torch
-import torch.multiprocessing as mp
-import torch.nn as nn
 
 from analysis.classification import WatChMaLClassification
 from analysis.classification import plot_efficiency_profile
@@ -63,6 +60,9 @@ logger = logging.getLogger('train')
 
 def training_runner(rank, settings, kernel_size, stride):
 
+    import torch
+    import torch.multiprocessing as mp
+    import torch.nn as nn
     print(f"rank: {rank}")
     #gpu = settings.gpuNumber[rank]
     world_size=1
@@ -96,9 +96,13 @@ def init_training():
 
     settings = utils()
     settings.set_output_directory()
-    default_call = ["python", "WatChMaL/main.py", "--config-name=t2k_resnet_train"] 
+    default_call = ["python", "WatChMaL/main.py", "--config-name="+settings.configName] 
     indicesFile = check_list_and_convert(settings.indicesFile)
-    inputPath = [os.getenv('SLURM_TMPDIR') + '/digi_combine.hy'] 
+    #Make sure the name of file matches the one you copy/set in util_config.ini
+    if settings.batchSystem:
+        inputPath = [os.getenv('SLURM_TMPDIR') + '/digi_combine.hy'] 
+    else:
+        inputPath = check_list_and_convert(settings.inputPath)
     featureExtractor = check_list_and_convert(settings.featureExtractor)
     lr = check_list_and_convert(settings.lr)
     lr_decay = check_list_and_convert(settings.lr_decay)
@@ -108,7 +112,7 @@ def init_training():
     perm_output_path = settings.outputPath
     variable_list = ['indicesFile', 'inputPath', 'learningRate', 'weightDecay', 'learningRateDecay', 'featureExtractor',  'stride', 'kernelSize']
     for x in itertools.product(indicesFile, inputPath, lr, weightDecay, lr_decay, featureExtractor, stride, kernelSize):
-        default_call = ["python", "WatChMaL/main.py", "--config-name=t2k_resnet_train"] 
+        default_call = ["python", "WatChMaL/main.py", "--config-name="+settings.configName] 
         now = datetime.now()
         dt_string = now.strftime("%d%m%Y-%H%M%S")
         #dt_string = '20092023-101855'
@@ -118,7 +122,7 @@ def init_training():
         default_call.append("data.dataset.h5file="+x[1])
         default_call.append("tasks.train.optimizers.lr="+str(x[2]))
         default_call.append("tasks.train.optimizers.weight_decay="+str(x[3]))
-        #default_call.append("tasks.train.scheduler.gamma="+str(x[4]))
+        default_call.append("tasks.train.scheduler.gamma="+str(x[4]))
         default_call.append("model._target_="+str(x[5]))
         default_call.append("model.stride="+str(x[6]))
         default_call.append("model.kernelSize="+str(x[7]))

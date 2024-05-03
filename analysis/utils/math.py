@@ -36,7 +36,7 @@ def towall(position, angle, tank_half_height=1810, tank_radius=1690, tank_axis=N
     pos_along = position[..., tank_axis]
     dir_along, dir_trans = polar_to_cartesian(angle)
     a = np.linalg.norm(dir_trans, axis=-1)**2
-    b = np.sum(pos_trans*dir_trans, axis=-1)
+    b = np.sum(np.multiply(pos_trans,dir_trans), axis=-1)
     c = np.linalg.norm(pos_trans, axis=-1) ** 2 - tank_radius ** 2
     towall_barrel = (-b + np.sqrt(b**2-a*c)) / a
     towall_endcap = tank_half_height / abs(dir_along) - pos_along / dir_along
