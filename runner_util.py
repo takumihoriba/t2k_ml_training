@@ -136,7 +136,6 @@ def make_split_file(h5_file,train_val_test_split=[0.70,0.15], output_path='data/
             print(f'NEW! WARNING: Removing additional events to flatten truth visible energy distribution')
 
             events_hits_index = np.append(h5fw['event_hits_index'], h5fw['hit_pmt'].shape[0])
-            print(events_hits_index)
             nhits = (events_hits_index[indices_to_keep+1] - events_hits_index[indices_to_keep]).squeeze()
 
             keep_bool = np.array(h5fw['keep_event'])
@@ -161,7 +160,6 @@ def make_split_file(h5_file,train_val_test_split=[0.70,0.15], output_path='data/
             nhits = (events_hits_index[indices_to_keep+1] - events_hits_index[indices_to_keep]).squeeze()
             #print(f'itk length: {len(indices_to_keep)}')
             print(np.ravel(h5py.File(h5_file,mode='r')['labels'])==1)
-            print(nhits > 100)
             indices_to_keep = np.where(np.logical_and(np.ravel(h5py.File(h5_file,mode='r')['labels'])==1, nhits > 200))
             print(indices_to_keep)
             #print(f'itk length after: {indices_to_keep[0].shape}')
@@ -261,7 +259,7 @@ class train_config():
 class utils():
     """Utility class to read in config file, prepare WatChMaL training
     """
-    def __init__(self, parser_file='util_config.ini') -> None:
+    def __init__(self, parser_file='config/util_config.ini') -> None:
         config = configparser.ConfigParser()
         config.read(parser_file)
         arch = config['DEFAULT']['NetworkArchitecture'] 
@@ -526,3 +524,125 @@ class utils():
 
     def getPlotInfo(self):
         return self.outputPath, self.arch
+
+class analysisUtils():
+
+    """Utility class to read in config file, analyze WatChMaL training
+    """
+    def __init__(self, parser_file='config/analysis_config.ini') -> None:
+        config = configparser.ConfigParser()
+        config.read(parser_file)
+        arch = config['DEFAULT']['ReconstructionType']
+        self.parser_string(config, arch)
+
+    def parser_string(self, config, arch):
+        """Parses util_config.ini, converts strings to booleans/ints/float
+
+        Args:
+            config (_type_): The config data structure from the file given
+            arch (_type_): The architecture chosen
+
+        Returns:
+            int: 0 if there is a problem
+        """
+        self.doRegression=False
+        self.doClassifiaction=False
+        self.list_for_sweep = []
+        for key in config[arch]:
+            #use lower() to ignore any mistakes in capital letter in config file
+            if 'InputPath'.lower() in key.lower():
+                self.inputPath = config[arch][key]
+            elif 'reconstructionType'.lower() in key.lower():
+                self.recoType = config[arch][key]
+            elif 'OutputPlotPath'.lower() in key.lower():
+                output_plot = config[arch][key]
+                self.outputPlotPath = output_plot
+            elif 'OutputStatsPath'.lower() in key.lower():
+                output_stats = config[arch][key]
+                self.outputStatsPath = output_stats
+            elif 'DoClassification'.lower() in key.lower():
+                self.doClassification = config[arch].getboolean(key)
+            elif 'DoRegression'.lower() in key.lower():
+                self.doRegression = config[arch].getboolean(key)
+            elif 'DoML'.lower() in key.lower():
+                self.doML = config[arch].getboolean(key)
+            elif 'DoFiTQun'.lower() in key.lower():
+                self.doFiTQun = config[arch].getboolean(key)
+            elif 'DoCombination'.lower() in key.lower():
+                self.doCombination = config[arch].getboolean(key)
+            elif 'NetworkArchitecture'.lower() in key.lower():
+                self.arch = config[arch][key]
+            elif 'mlPath'.lower() in key.lower():
+                ml_path = config[arch][key]
+                self.mlPath = ml_path
+            elif 'fitqunPath'.lower() in key.lower():
+                fitqun_path = config[arch][key]
+                self.fitqunPath = fitqun_path
+            elif 'plotName'.lower() in key.lower():
+                plot_name = config[arch][key]
+                self.plotName = plot_name
+            elif 'target'.lower() in key.lower():
+                target = config[arch][key]
+                self.target = target
+            elif 'PlotName'.lower() in key.lower():
+                plotName = config[arch][key]
+                self.plotName = plotName
+            elif 'particleLabel'.lower() in key.lower():
+                particle_label = config[arch][key]
+                self.particleLabel = int(particle_label)
+            elif 'signalLabels'.lower() in key.lower():
+                if ',' in config[arch][key]:
+                    self.signalLabels = self.getListOfInput(config[arch][key], int)
+                    self.list_for_sweep.append(self.signalLabels)
+                else:
+                    self.signalLabels = int(config[arch][key])
+            elif 'bkgLabels'.lower() in key.lower():
+                if ',' in config[arch][key]:
+                    self.bkgLabels = self.getListOfInput(config[arch][key], int)
+                    self.list_for_sweep.append(self.bkgLabels)
+                else:
+                    self.bkgLabels = int(config[arch][key])
+            else:
+                print(f'Variable {key} not found, exiting')
+                return 0
+
+    def save_options(self,filepath,filename):
+        """Save the class and its variables in file
+
+        Args:
+            filepath (_type_): Path to file
+            filename (_type_): Name of file
+        """
+        with open(filepath+'/'+filename,'wb') as f:
+            pickle.dump(self,f)
+
+    def load_options(self,filepath,filename):
+        """Load the class and its variables from file
+
+        Args:
+            filepath (_type_): Path to file
+            filename (_type_): Name of file
+
+        Returns:
+            WCSimOptions class object: Loaded class
+        """
+        with open(filepath+'/'+filename,'rb') as f:
+            new_options = pickle.load(f)
+            return new_options
+
+    def set_output_directory(self):
+        """Makes an output file as given in the arguments
+        """
+        if not(os.path.exists(self.outputPlotPath) and os.path.isdir(self.outputPlotPath)):
+            try:
+                os.makedirs(self.outputPlotPath)
+                os.makedirs(self.outputPlotPath+'/scan/')
+            except FileExistsError as error:
+                print("Directory " + str(self.outputPlotPath) +" already exists")
+                if self.batch is True:
+                    exit
+
+    def getListOfInput(self, list_of_inputs, type):
+        inputs = list_of_inputs.split(",")
+        inputs = list(map(type, inputs))
+        return inputs

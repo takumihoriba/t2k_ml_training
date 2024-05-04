@@ -259,3 +259,7 @@ def binomial_error(x):
         return 0
     p = np.count_nonzero(x)/trials
     return np.sqrt(p*(1-p)/trials)
+
+def get_cherenkov_threshold(label):
+    threshold_dict = {0: 160., 1:0.8, 2:211.715}
+    return threshold_dict[label]
