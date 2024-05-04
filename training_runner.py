@@ -16,15 +16,17 @@ import torch
 import torch.multiprocessing as mp
 import torch.nn as nn
 
-from analysis.classification import WatChMaLClassification
-from analysis.classification import plot_efficiency_profile
-from analysis.utils.plotting import plot_legend
+#from analysis.classification import WatChMaLClassification
+#from analysis.classification import plot_efficiency_profile
+#from analysis.utils.plotting import plot_legend
 import analysis.utils.math as math
-from runner_util import utils, train_config, make_split_file
-from analysis.utils.binning import get_binning
-#from compare_outputs import compare_outputs
 
-from plotting import fitqun_regression_results
+from analyze_output.analyze_regression import analyze_regression
+from analyze_output.analyze_classification import analyze_classification
+
+from runner_util import utils, analysisUtils, train_config, make_split_file
+from analysis.utils.binning import get_binning
+
 
 from torchmetrics import AUROC, ROC
 
@@ -38,6 +40,7 @@ parser.add_argument("--doFiTQun", help="run fitqun results", action="store_true"
 parser.add_argument("--doEvaluation", help="run evaluation on already trained network", action="store_true")
 parser.add_argument("--doComparison", help="run comparison", action="store_true")
 parser.add_argument("--doQuickPlots", help="Make performance plots", action="store_true")
+parser.add_argument("--doAnalysis", help="run analysis of ml and/or fitqun", action="store_true")
 parser.add_argument("--doIndices", help="create train/val/test indices file", action="store_true")
 parser.add_argument("--testParser", help="run training", action="store_true")
 parser.add_argument("--plotInput", help="run training")
@@ -96,12 +99,16 @@ def training_runner(rank, settings, kernel_size, stride):
 def init_training():
     """Reads util_config.ini, constructs command to run 1 training
     """
+    onCedar=False
 
     settings = utils()
     settings.set_output_directory()
-    default_call = ["python", "WatChMaL/main.py", "--config-name=t2k_resnet_train"] 
+    default_call = ["python", "WatChMaL/main.py", "--config-name=t2k_resnet_train_classifier"] 
     indicesFile = check_list_and_convert(settings.indicesFile)
-    inputPath = [os.getenv('SLURM_TMPDIR') + '/digi_combine.hy'] 
+    if not onCedar:
+        inputPath = [settings.inputPath] 
+    else:
+        inputPath = [os.getenv('SLURM_TMPDIR') + '/digi_combine.hy'] 
     featureExtractor = check_list_and_convert(settings.featureExtractor)
     lr = check_list_and_convert(settings.lr)
     lr_decay = check_list_and_convert(settings.lr_decay)
@@ -111,7 +118,7 @@ def init_training():
     perm_output_path = settings.outputPath
     variable_list = ['indicesFile', 'inputPath', 'learningRate', 'weightDecay', 'learningRateDecay', 'featureExtractor',  'stride', 'kernelSize']
     for x in itertools.product(indicesFile, inputPath, lr, weightDecay, lr_decay, featureExtractor, stride, kernelSize):
-        default_call = ["python", "WatChMaL/main.py", "--config-name=t2k_resnet_train"] 
+        default_call = ["python", "WatChMaL/main.py", "--config-name=t2k_resnet_train_classifier"] 
         now = datetime.now()
         dt_string = now.strftime("%d%m%Y-%H%M%S")
         #dt_string = '20092023-101855'
@@ -177,8 +184,8 @@ def end_training(settings, variable_list=[], variables=[]):
 
 
 
-if args.doComparison:
-    compare_outputs(args.comparisonFolder)
+#if args.doComparison:
+#    compare_outputs(args.comparisonFolder)
 
 if args.doIndices:
     make_split_file(args.indicesInput, train_val_test_split=[0.05,0.05], output_path=args.indicesOutputPath, nfolds=args.numFolds, seed=0)
@@ -197,11 +204,11 @@ if args.doEvaluation:
     settings = utils()
     settings.outputPath = args.evaluationOutputDir
     settings.set_output_directory()
-    default_call = ["python", "WatChMaL/main.py", "--config-name=t2k_resnet_eval"] 
+    default_call = ["python", "WatChMaL/main.py", "--config-name=t2k_resnet_eval_classifier"] 
     indicesFile = check_list_and_convert(settings.indicesFile)
     perm_output_path = settings.outputPath
 
-    default_call = ["python", "WatChMaL/main.py", "--config-name=t2k_resnet_eval"] 
+    default_call = ["python", "WatChMaL/main.py", "--config-name=t2k_resnet_eval_classifier"] 
 
 
     settings.outputPath = args.evaluationInputDir
@@ -213,6 +220,18 @@ if args.doEvaluation:
     
 if args.testParser:
     pass
+
+if args.doAnalysis:
+    settings = analysisUtils()
+    settings.set_output_directory()
+
+    if settings.doRegression:
+        #analyze_regression(settings.inputPath, settings.mlPath, settings.fitqunPath, settings.particleLabel, settings.target, settings.outputPlotPath)
+        analyze_regression(settings)
+    if settings.doClassification:
+        analyze_classification(settings)
+    
+
 
 if args.doQuickPlots:
     
