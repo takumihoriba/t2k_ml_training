@@ -32,7 +32,7 @@ def combine_softmax(softmaxes, labels):
 
 
 def plot_rocs(runs, signal_labels, background_labels, selection=None, ax=None, fig_size=None, x_label="", y_label="",
-              x_lim=None, y_lim=None, y_log=None, x_log=None, legend='best', mode='rejection', **plot_args):
+              x_lim=None, y_lim=None, y_log=None, x_log=None, legend='best', mode='rejection', fitqun=None, **plot_args):
     """
     Plot overlaid ROC curves of results from a number of classification runs
 
@@ -102,6 +102,8 @@ def plot_rocs(runs, signal_labels, background_labels, selection=None, ax=None, f
             raise ValueError(f"Unknown ROC curve mode '{mode}'.")
     ax.set_xlabel(x_label)
     ax.set_ylabel(y_label)
+    if fitqun is not None:
+        plt.plot(fitqun[0], fitqun[1], 'ro', label='fiTQun')
     if x_log:
         ax.set_xscale('log')
     if y_log:
@@ -273,6 +275,7 @@ class ClassificationRun(ABC):
         # put inf as first and last threshold for overflow bins
         padded_thresholds = np.concatenate(([np.inf], thresholds, [np.inf]))
         self.cut = np.array(discriminator_values) > padded_thresholds[binning[1]]
+        print(f'CUT: {self.cut}')
         if return_thresholds:
             return self.cut, thresholds
         else:

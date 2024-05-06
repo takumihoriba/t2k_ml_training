@@ -1,8 +1,8 @@
 #from WatChMaL.analysis.plot_utils import disp_learn_hist, disp_learn_hist_smoothed, compute_roc, plot_roc
 
 import argparse
-import debugpy
-import h5py
+#import debugpy
+#import h5py
 import logging
 import os  
 import csv
@@ -12,30 +12,32 @@ import itertools
 
 import subprocess
 
-import torch
-import torch.multiprocessing as mp
-import torch.nn as nn
 
-from WatChMaL.watchmal.engine.engine_classifier import ClassifierEngine
-from analysis.classification import WatChMaLClassification
-from analysis.classification import plot_efficiency_profile
-from analysis.utils.plotting import plot_legend
+#from analysis.classification import WatChMaLClassification
+#from analysis.classification import plot_efficiency_profile
+#from analysis.utils.plotting import plot_legend
 import analysis.utils.math as math
-from runner_util import utils, train_config, make_split_file
+
+from analyze_output.analyze_regression import analyze_regression
+from analyze_output.analyze_classification import analyze_classification
+
+from runner_util import utils, analysisUtils, train_config, make_split_file
 from analysis.utils.binning import get_binning
-from compare_outputs import compare_outputs
+
 
 from torchmetrics import AUROC, ROC
 
-from lxml import etree
+#from lxml import etree
 
 import hydra
 
 parser = argparse.ArgumentParser(fromfile_prefix_chars='@')
 parser.add_argument("--doTraining", help="run training", action="store_true")
+parser.add_argument("--doFiTQun", help="run fitqun results", action="store_true")
 parser.add_argument("--doEvaluation", help="run evaluation on already trained network", action="store_true")
 parser.add_argument("--doComparison", help="run comparison", action="store_true")
 parser.add_argument("--doQuickPlots", help="Make performance plots", action="store_true")
+parser.add_argument("--doAnalysis", help="run analysis of ml and/or fitqun", action="store_true")
 parser.add_argument("--doIndices", help="create train/val/test indices file", action="store_true")
 parser.add_argument("--testParser", help="run training", action="store_true")
 parser.add_argument("--plotInput", help="run training")
@@ -64,6 +66,9 @@ logger = logging.getLogger('train')
 
 def training_runner(rank, settings, kernel_size, stride):
 
+    import torch
+    import torch.multiprocessing as mp
+    import torch.nn as nn
     print(f"rank: {rank}")
     #gpu = settings.gpuNumber[rank]
     world_size=1
@@ -89,21 +94,22 @@ def training_runner(rank, settings, kernel_size, stride):
 
     data_config, train_data_loader, val_data_loader, train_indices, test_indices, val_indices = settings.initDataset(rank)
     model = nn.parallel.DistributedDataParallel(settings.classification_engine, device_ids=[settings.gpuNumber])
-    engine = ClassifierEngine(model, rank, settings.gpuNumber, settings.outputPath)
 
-    engine.configure_data_loaders(data_config, train_data_loader, val_data_loader, settings.multiGPU, 0, train_indices, test_indices, val_indices, settings)
-    engine.configure_optimizers(settings)
-    settings.save_options(settings.outputPath, 'training_settings')
-    engine.train(settings)
 
 def init_training():
     """Reads util_config.ini, constructs command to run 1 training
     """
+    onCedar=False
 
     settings = utils()
     settings.set_output_directory()
-    default_call = ["python", "WatChMaL/main.py", "--config-name=t2k_resnet_train"] 
+    default_call = ["python", "WatChMaL/main.py", "--config-name="+settings.configName] 
     indicesFile = check_list_and_convert(settings.indicesFile)
+    #Make sure the name of file matches the one you copy/set in util_config.ini
+    if settings.batchSystem:
+        inputPath = [os.getenv('SLURM_TMPDIR') + '/digi_combine.hy'] 
+    else:
+        inputPath = check_list_and_convert(settings.inputPath)
     featureExtractor = check_list_and_convert(settings.featureExtractor)
     lr = check_list_and_convert(settings.lr)
     lr_decay = check_list_and_convert(settings.lr_decay)
@@ -111,21 +117,22 @@ def init_training():
     stride = check_list_and_convert(settings.stride)
     kernelSize = check_list_and_convert(settings.kernel)
     perm_output_path = settings.outputPath
-    variable_list = ['indicesFile', 'learningRate', 'weightDecay', 'learningRateDecay', 'featureExtractor',  'stride', 'kernelSize']
-    for x in itertools.product(indicesFile, lr, weightDecay, lr_decay, featureExtractor, stride, kernelSize):
-        default_call = ["python", "WatChMaL/main.py", "--config-name=t2k_resnet_train"] 
+    variable_list = ['indicesFile', 'inputPath', 'learningRate', 'weightDecay', 'learningRateDecay', 'featureExtractor',  'stride', 'kernelSize']
+    for x in itertools.product(indicesFile, inputPath, lr, weightDecay, lr_decay, featureExtractor, stride, kernelSize):
+        default_call = ["python", "WatChMaL/main.py", "--config-name="+settings.configName] 
         now = datetime.now()
         dt_string = now.strftime("%d%m%Y-%H%M%S")
-        dt_string = '20092023-101855'
+        #dt_string = '20092023-101855'
         settings.outputPath = perm_output_path+'/'+dt_string+'/'
-        print(f'TRAINING WITH\n indices file: {x[0]}\n learning rate: {x[1]}\n learning rate decay: {x[3]}\n weight decay: {x[2]}\n feature extractor: {x[4]}\n output path: {settings.outputPath}')
+        print(f'TRAINING WITH\n input file: {x[1]} \n indices file: {x[0]}\n learning rate: {x[2]}\n learning rate decay: {x[4]}\n weight decay: {x[3]}\n feature extractor: {x[5]}\n output path: {settings.outputPath}')
         default_call.append("data.split_path="+x[0])
-        default_call.append("tasks.train.optimizers.lr="+str(x[1]))
-        default_call.append("tasks.train.optimizers.weight_decay="+str(x[2]))
-        default_call.append("tasks.train.scheduler.gamma="+str(x[3]))
-        default_call.append("model.feature_extractor._target_="+str(x[4]))
-        default_call.append("model.feature_extractor.stride="+str(x[5]))
-        default_call.append("model.feature_extractor.kernelSize="+str(x[6]))
+        default_call.append("data.dataset.h5file="+x[1])
+        default_call.append("tasks.train.optimizers.lr="+str(x[2]))
+        default_call.append("tasks.train.optimizers.weight_decay="+str(x[3]))
+        default_call.append("tasks.train.scheduler.gamma="+str(x[4]))
+        default_call.append("model._target_="+str(x[5]))
+        default_call.append("model.stride="+str(x[6]))
+        default_call.append("model.kernelSize="+str(x[7]))
         default_call.append("hydra.run.dir=" +str(settings.outputPath))
         default_call.append("dump_path=" +str(settings.outputPath))
         print(default_call)
@@ -140,7 +147,7 @@ def check_list_and_convert(input):
         output = input
     return output
 
-def end_training(settings, variable_list, variables):
+def end_training(settings, variable_list=[], variables=[]):
 
     softmaxes = np.load(settings.outputPath+'/'+'softmax.npy')
     labels = np.load(settings.outputPath+'/'+'labels.npy')
@@ -149,15 +156,19 @@ def end_training(settings, variable_list, variables):
     auroc = AUROC(task="binary")
     auc = auroc (torch.tensor(softmaxes[:,1]),torch.tensor(labels))
     print(f'AUC: {auc}')
-    roc = ROC(task="binary")
-    fpr, tpr, thresholds = roc(torch.tensor(softmaxes[:,1]), torch.tensor(labels))
+    if len(np.unique(labels)) < 2:
+        roc = ROC(task="binary")
+        fpr, tpr, thresholds = roc(torch.tensor(softmaxes[:,1]), torch.tensor(labels))
+        for i, eff in enumerate(tpr):
+            #From SK data quality paper, table 13 https://t2k.org/docs/technotes/399/v2r1
+            if eff > 0.99876:
+                print(f'tpr: {eff}, bkg rej: {1/fpr[i]}')
+                bkg_rej = 1/fpr[i]
+                break
+    else:
+        roc = ROC(task="multiclass", num_classes = len(np.unique(labels)))
+        fpr, tpr, thresholds = roc(torch.tensor(softmaxes), torch.tensor(labels))
     bkg_rej = 0
-    for i, eff in enumerate(tpr):
-        #From SK data quality paper, table 13 https://t2k.org/docs/technotes/399/v2r1
-        if eff > 0.99876:
-            print(f'tpr: {eff}, bkg rej: {1/fpr[i]}')
-            bkg_rej = 1/fpr[i]
-            break
 
     root = etree.Element('Training')
     level1_stats = etree.SubElement(root, 'Stats')
@@ -174,8 +185,8 @@ def end_training(settings, variable_list, variables):
 
 
 
-if args.doComparison:
-    compare_outputs(args.comparisonFolder)
+#if args.doComparison:
+#    compare_outputs(args.comparisonFolder)
 
 if args.doIndices:
     make_split_file(args.indicesInput, train_val_test_split=[0.05,0.05], output_path=args.indicesOutputPath, nfolds=args.numFolds, seed=0)
@@ -187,28 +198,41 @@ if args.doIndices:
 if args.doTraining:
     init_training() 
 
+if args.doFiTQun:
+    fitqun_regression_results()
+
 if args.doEvaluation:
     settings = utils()
     settings.outputPath = args.evaluationOutputDir
     settings.set_output_directory()
-    default_call = ["python", "WatChMaL/main.py", "--config-name=t2k_resnet_train"] 
+    default_call = ["python", "WatChMaL/main.py", "--config-name=t2k_resnet_eval_classifier"] 
     indicesFile = check_list_and_convert(settings.indicesFile)
     perm_output_path = settings.outputPath
 
-    default_call = ["python", "WatChMaL/main.py", "--config-name=t2k_resnet_train"] 
+    default_call = ["python", "WatChMaL/main.py", "--config-name=t2k_resnet_eval_classifier"] 
 
 
     settings.outputPath = args.evaluationInputDir
     default_call.append("hydra.run.dir=" +str(args.evaluationInputDir))
-    default_call.append("engine.restore_path=" +str(args.evaluationInputDir))
     default_call.append("dump_path=" +str(args.evaluationOutputDir))
-    default_call.append("tasks.train.epochs=" +str(0))
-    default_call.append("tasks.train.restore_best_state= true")
     print(default_call)
     subprocess.call(default_call)
+    #end_training(settings)
     
 if args.testParser:
     pass
+
+if args.doAnalysis:
+    settings = analysisUtils()
+    settings.set_output_directory()
+
+    if settings.doRegression:
+        #analyze_regression(settings.inputPath, settings.mlPath, settings.fitqunPath, settings.particleLabel, settings.target, settings.outputPlotPath)
+        analyze_regression(settings)
+    if settings.doClassification:
+        analyze_classification(settings)
+    
+
 
 if args.doQuickPlots:
     

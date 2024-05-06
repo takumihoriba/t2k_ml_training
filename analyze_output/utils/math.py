@@ -36,7 +36,7 @@ def towall(position, angle, tank_half_height=1810, tank_radius=1690, tank_axis=N
     pos_along = position[..., tank_axis]
     dir_along, dir_trans = polar_to_cartesian(angle)
     a = np.linalg.norm(dir_trans, axis=-1)**2
-    b = np.sum(pos_trans*dir_trans, axis=-1)
+    b = np.sum(np.multiply(pos_trans,dir_trans), axis=-1)
     c = np.linalg.norm(pos_trans, axis=-1) ** 2 - tank_radius ** 2
     towall_barrel = (-b + np.sqrt(b**2-a*c)) / a
     towall_endcap = tank_half_height / abs(dir_along) - pos_along / dir_along
@@ -72,7 +72,7 @@ def dwall(position, tank_half_height=1810, tank_radius=1690, tank_axis=None):
     return np.minimum(dwall_barrel, dwall_endcap)
 
 
-def momentum_from_energy(energy, label, particle_masses=np.array((0, 0.511, 105.7, 134.98))):
+def momentum_from_energy(energy, label, particle_masses=np.array((105.7, 0.511, 134.98, 134.98))):
     """
     Calculate momentum of particle from total energy and particle type (label)
     Default labels are 0:gamma, 1:electron, 2:muon, 3:pi0
@@ -95,7 +95,7 @@ def momentum_from_energy(energy, label, particle_masses=np.array((0, 0.511, 105.
     return np.sqrt(energy**2 - mass**2)
 
 
-def energy_from_momentum(momentum, label, particle_masses=np.array((0, 0.511, 105.7, 134.98))):
+def energy_from_momentum(momentum, label, particle_masses=np.array((105.7, 0.511, 105.7, 134.98))):
     """
     Calculate total energy of particle from momentum and particle type (label)
     Default labels are 0:gamma, 1:electron, 2:muon, 3:pi0
@@ -259,3 +259,7 @@ def binomial_error(x):
         return 0
     p = np.count_nonzero(x)/trials
     return np.sqrt(p*(1-p)/trials)
+
+def get_cherenkov_threshold(label):
+    threshold_dict = {0: 160., 1:0.8, 2:211.715}
+    return threshold_dict[label]

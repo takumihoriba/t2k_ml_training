@@ -9,14 +9,19 @@ import h5py
 import numpy as np
 
 from sklearn.model_selection import KFold, train_test_split
+from scipy.optimize import curve_fit
 
-from WatChMaL.watchmal.model.classifier import Classifier, PassThrough, PointNetFullyConnected, ResNetFullyConnected
-from WatChMaL.watchmal.model.pointnet import PointNetFeat
-from WatChMaL.watchmal.model.resnet import resnet18
+from math import log
+
+import analysis.utils.math as math
+
+
+#from WatChMaL.watchmal.model.pointnet import PointNetFeat
+#from WatChMaL.watchmal.model.resnet import resnet18
 #from WatChMaL.watchmal.dataset.t2k.t2k_dataset import PointNetT2KDataset, T2KCNNDataset
 
-import torch
-from torch.utils.data.sampler import SubsetRandomSampler
+#import torch
+#from torch.utils.data.sampler import SubsetRandomSampler
 
 def calc_dwall_cut(file,cut):
     temp_x = h5py.File(file,mode='r')['positions'][:,0,0]
@@ -24,6 +29,44 @@ def calc_dwall_cut(file,cut):
     temp_r = np.sqrt(np.add(np.square(np.array(temp_x)), np.square(np.array(temp_y))))
     temp_z = np.abs(np.array(h5py.File(file,mode='r')['positions'][:,0,2]))
     return np.logical_and(temp_r < (1690-cut), temp_z < (1850-cut))
+
+
+def mom_from_energies(energies, labels):
+    energies = np.ravel(energies)
+    print(energies.shape)
+    print(labels.shape)
+    momenta = np.ones(len(energies), dtype=np.double)*-1
+    print(momenta[labels==1].shape)
+    momenta[labels == 1] = np.sqrt(np.subtract(np.multiply(energies[labels==1], energies[labels==1]),np.multiply(momenta[labels==1]*0.5,momenta[labels==1]*0.5)))
+    #momenta = np.sqrt(np.multiply(energies, energies) - np.multiply(momenta*0.5,momenta*0.5))
+    momenta[labels == 0] = np.sqrt(np.multiply(energies[labels==0], energies[labels==0]) - np.multiply(momenta[labels==0]*105.7,momenta[labels==0]*105.7))
+    momenta[labels == 2] = np.sqrt(np.multiply(energies[labels==2], energies[labels==2]) - np.multiply(momenta[labels==2]*139.584,momenta[labels==2]*139.584))
+    return momenta
+
+def lq(x, a, b, c):
+    return a+b*x+c*x*x
+
+def mom_to_range_dicts():
+    muon_mom = [47.04, 56.16, 68.02, 85.09, 100.3, 152.7, 176.4, 221.8, 286.8, 391.7, 494.5, 899.5, 1101., 1502., 2103.]
+    muon_range = [0.6998, 1.279, 2.392, 4.782, 7.696, 22.61, 31.24, 49.68, 78.94, 129.1, 179.6, 377.1, 473.2, 661.1, 935.3]
+
+    (a_mu, b_mu, c_mu), pcov_mu = curve_fit(lq, muon_mom, muon_range, p0=[0.05, 0.05,0.05])
+
+    electron_mom = [1.00E+01, 1.25E+01, 1.50E+01, 1.75E+01, 2.00E+01, 2.50E+01, 3.00E+01, 3.50E+01, 4.00E+01, 4.50E+01, 5.00E+01, 5.50E+01, 6.00E+01, 7.00E+01, 8.00E+01, 9.00E+01, 1.00E+02, 1.25E+02, 
+                    1.50E+02, 1.75E+02, 2.00E+02, 2.50E+02, 3.00E+02, 3.50E+02, 4.00E+02, 4.50E+02, 5.00E+02, 5.50E+02, 6.00E+02, 7.00E+02, 8.00E+02, 9.00E+02, 1.00E+03]
+    electron_range = [4.98E+00, 6.12E+00, 7.22E+00, 8.29E+00, 9.32E+00, 1.13E+01, 1.32E+01, 1.50E+01, 1.67E+01, 1.83E+01, 1.98E+01, 2.13E+01, 2.28E+01, 2.55E+01, 2.80E+01, 3.04E+01, 3.26E+01, 
+                      3.76E+01, 4.20E+01, 4.60E+01, 4.96E+01, 5.58E+01, 6.12E+01, 6.58E+01, 7.00E+01, 7.37E+01, 7.71E+01, 8.01E+01, 8.30E+01, 8.81E+01, 9.26E+01, 9.66E+01, 1.00E+02]
+
+    (a_el, b_el, c_el), pcov_el = curve_fit(lq, electron_mom, electron_range, p0=[0.05, 0.05,0.05])
+
+
+    return [(a_mu, b_mu, c_mu), (a_el, b_el, c_el)]
+
+#For electron in water
+#Energy in MeV, returns shower depth in cm
+def electron_shower_depth(energy):
+    
+    return 36*(np.log(energy/10.))/(log(2)) 
 
 
 def make_split_file(h5_file,train_val_test_split=[0.70,0.15], output_path='data/', seed=0, nfolds=3):
@@ -59,17 +102,70 @@ def make_split_file(h5_file,train_val_test_split=[0.70,0.15], output_path='data/
     #indices_to_keep = np.array(range(len(dwall_cut)))[np.logical_and(np.logical_and(dwall_cut,~h5py.File(h5_file,mode='r')['veto'][:]), np.ravel(h5py.File(h5_file,mode='r')['primary_charged_range']) != -999)]
     #indices_to_keep = np.array(range(len(dwall_cut)))[np.logical_and(np.logical_and(dwall_cut,np.logical_and(~h5py.File(h5_file,mode='r')['veto'][:], ~h5py.File(h5_file,mode='r')['decay_electron_exists'][:])), np.ravel(h5py.File(h5_file,mode='r')['primary_charged_range']) != -999)]
     #indices_to_keep = np.array(range(len(dwall_cut)))[np.logical_and(dwall_cut, ~h5py.File(h5_file,mode='r')['veto'][:])]
+    #Keep only electrons
+    #indices_to_keep = np.array(range(len(dwall_cut)))[np.where(np.ravel(h5py.File(h5_file,mode='r')['labels'])==1)]
+    indices_to_keep = np.array(range(len(dwall_cut)))
+    #print(indices_to_keep)
+    fully_contained=True
     
     with h5py.File(h5_file, mode='r') as h5fw:
         # select indices only with 'keep_event' == True (if key exists), instead of keeping all events
+        if fully_contained:
+            print("Running fully contained")
+            labels = np.array(h5fw['labels'])
+            energies = np.squeeze(h5fw['energies'])
+            momenta = mom_from_energies(np.array(energies), labels)
+            ranges = np.zeros(momenta.shape[0])
+            e_shower_depth = np.zeros(momenta.shape[0])
+            range_fit_params = mom_to_range_dicts()
+            ranges[(labels==0) & (labels==2)] = lq(momenta[(labels==0) & (labels==1)], range_fit_params[0][0], range_fit_params[0][1], range_fit_params[0][2])
+            ranges[(labels==1)] = lq(momenta[(labels==1)], range_fit_params[1][0], range_fit_params[1][1], range_fit_params[1][2])
+            e_shower_depth[(labels==1)] = electron_shower_depth(energies[labels==1])
+            ranges[labels==1] = np.maximum(ranges[labels==1], e_shower_depth[labels==1])
+            towall = math.towall(np.squeeze(h5fw['positions']), np.array(h5fw['angles']), tank_axis = 2)
+
+
+            towall_compare = towall > 2*ranges
+
+            #print(np.unique(towall_compare, return_counts=True))
+
+            #print(f"towall: {towall[towall_compare==False]}")
+            #print(f"range: {ranges[towall_compare==False]}")
+            #print(f"momenta: {momenta[towall_compare==False]}")
         if 'keep_event' in h5fw.keys():
             print(f'NEW! WARNING: Removing additional events to flatten truth visible energy distribution')
+
+            events_hits_index = np.append(h5fw['event_hits_index'], h5fw['hit_pmt'].shape[0])
+            nhits = (events_hits_index[indices_to_keep+1] - events_hits_index[indices_to_keep]).squeeze()
+
             keep_bool = np.array(h5fw['keep_event'])
-            indices_to_keep = np.where(keep_bool == True)[0] 
+            if fully_contained:
+                indices_to_keep = np.where(np.logical_and(np.logical_and(towall_compare == True, keep_bool==True),labels==1), nhits > 200)[0] 
+            else:
+                indices_to_keep = np.where(np.logical_and(np.logical_and(keep_bool == True, labels==1), nhits > 200))[0] 
+            print(nhits)
+            #indices_to_keep = np.where(keep_bool == True)[0] 
+        elif fully_contained:
+            events_hits_index = np.append(h5fw['event_hits_index'], h5fw['hit_pmt'].shape[0])
+            print(events_hits_index)
+            nhits = (events_hits_index[indices_to_keep+1] - events_hits_index[indices_to_keep]).squeeze()
+            indices_to_keep = np.where(np.logical_and(np.logical_and(towall_compare==True, labels==1), nhits>200))
         #Keep all    
+
         else:
+            #indices_to_keep = np.where(np.ravel(h5py.File(h5_file,mode='r')['labels'])==1)
             indices_to_keep = np.array(range(len(dwall_cut)))
+            events_hits_index = np.append(h5fw['event_hits_index'], h5fw['hit_pmt'].shape[0])
+            #print(events_hits_index)
+            nhits = (events_hits_index[indices_to_keep+1] - events_hits_index[indices_to_keep]).squeeze()
+            #print(f'itk length: {len(indices_to_keep)}')
+            print(np.ravel(h5py.File(h5_file,mode='r')['labels'])==1)
+            indices_to_keep = np.where(np.logical_and(np.ravel(h5py.File(h5_file,mode='r')['labels'])==1, nhits > 200))
+            print(indices_to_keep)
+            #print(f'itk length after: {indices_to_keep[0].shape}')
+            #print(np.unique(nhits > 1000, return_counts=True))
             
+    
     print(f'indices to keep: {len(indices_to_keep)}')
     #Based on root files, divide indices into train/val/test
     length_rootfiles = len(unique_root_files)
@@ -123,6 +219,21 @@ def make_split_file(h5_file,train_val_test_split=[0.70,0.15], output_path='data/
             test_indices = test_indices[np.isin(test_indices, indices_to_keep)]
             val_indices = val_indices[np.isin(val_indices, indices_to_keep)]
 
+
+            train_x = h5py.File(h5_file,mode='r')['positions'][:,:,0]
+            train_mean_x = np.mean(np.abs(train_x[train_indices]))
+            train_std_x = np.std(train_x[train_indices])
+
+            val_x = h5py.File(h5_file,mode='r')['positions'][:,:,0]
+            val_mean_x = np.mean(np.abs(val_x[val_indices]))
+            val_std_x = np.std(val_x[val_indices])
+
+            test_x = h5py.File(h5_file,mode='r')['positions'][:,:,0]
+            test_mean_x = np.mean(np.abs(test_x[test_indices]))
+            test_std_x = np.std(test_x[test_indices])
+
+            print(f'train x: {train_mean_x}({train_std_x}), val x: {val_mean_x}({val_std_x}), test x: {test_mean_x}({test_std_x})')
+
             labels = h5py.File(h5_file,mode='r')['labels']
 
 
@@ -130,8 +241,9 @@ def make_split_file(h5_file,train_val_test_split=[0.70,0.15], output_path='data/
             print(np.unique(np.ravel(labels)[train_indices], return_counts=True))
             print(np.unique(np.ravel(labels)[val_indices],return_counts=True))
             print(np.unique(np.ravel(labels)[test_indices],return_counts=True))
+            #print(f'TOTAL: {np.unique(np.ravel(labels)[train_indices], return_counts=True)[1][0] + np.unique(np.ravel(labels)[val_indices],return_counts=True)[1][0] + np.unique(np.ravel(labels)[test_indices],return_counts=True)[1][0]}')
             print(output_path)
-            np.savez(output_path + 'train_val_test_nFolds'+str(nfolds)+'_fold'+str(i)+'.npz',
+            np.savez(output_path + 'train_val_test_gt200Hits_FCTEST_nFolds'+str(nfolds)+'_fold'+str(i)+'.npz',
                     test_idxs=test_indices, val_idxs=val_indices, train_idxs=train_indices)
 
 
@@ -147,7 +259,7 @@ class train_config():
 class utils():
     """Utility class to read in config file, prepare WatChMaL training
     """
-    def __init__(self, parser_file='util_config.ini') -> None:
+    def __init__(self, parser_file='config/util_config.ini') -> None:
         config = configparser.ConfigParser()
         config.read(parser_file)
         arch = config['DEFAULT']['NetworkArchitecture'] 
@@ -179,6 +291,9 @@ class utils():
                 dt_string = now.strftime("%d%m%Y-%H%M%S")
                 output_file = config[arch][key]
                 self.outputPath = output_file
+            elif 'ConfigName'.lower() in key.lower():
+                config_name = config[arch][key]
+                self.configName = config_name
             elif 'NetworkArchitecture'.lower() in key.lower():
                 self.arch = config[arch][key]
             elif 'Classifier'.lower() in key.lower():
@@ -193,6 +308,8 @@ class utils():
                 self.doClassification = config[arch].getboolean(key)
             elif 'DoRegression'.lower() in key.lower():
                 self.doRegression = config[arch].getboolean(key)
+            elif 'batchSystem'.lower() in key.lower():
+                self.batchSystem = config[arch].getboolean(key)
             elif 'UseGPU'.lower() in key.lower():
                 self.useGPU = config[arch].getboolean(key)
             elif 'GPUNumber'.lower() in key.lower():
@@ -300,6 +417,7 @@ class utils():
     def set_output_directory(self):
         """Makes an output file as given in the arguments
         """
+        print(f"Making output direction: {self.outputPath}")
         if not(os.path.exists(self.outputPath) and os.path.isdir(self.outputPath)):
             try:
                 os.makedirs(self.outputPath)
@@ -406,3 +524,125 @@ class utils():
 
     def getPlotInfo(self):
         return self.outputPath, self.arch
+
+class analysisUtils():
+
+    """Utility class to read in config file, analyze WatChMaL training
+    """
+    def __init__(self, parser_file='config/analysis_config.ini') -> None:
+        config = configparser.ConfigParser()
+        config.read(parser_file)
+        arch = config['DEFAULT']['ReconstructionType']
+        self.parser_string(config, arch)
+
+    def parser_string(self, config, arch):
+        """Parses util_config.ini, converts strings to booleans/ints/float
+
+        Args:
+            config (_type_): The config data structure from the file given
+            arch (_type_): The architecture chosen
+
+        Returns:
+            int: 0 if there is a problem
+        """
+        self.doRegression=False
+        self.doClassifiaction=False
+        self.list_for_sweep = []
+        for key in config[arch]:
+            #use lower() to ignore any mistakes in capital letter in config file
+            if 'InputPath'.lower() in key.lower():
+                self.inputPath = config[arch][key]
+            elif 'reconstructionType'.lower() in key.lower():
+                self.recoType = config[arch][key]
+            elif 'OutputPlotPath'.lower() in key.lower():
+                output_plot = config[arch][key]
+                self.outputPlotPath = output_plot
+            elif 'OutputStatsPath'.lower() in key.lower():
+                output_stats = config[arch][key]
+                self.outputStatsPath = output_stats
+            elif 'DoClassification'.lower() in key.lower():
+                self.doClassification = config[arch].getboolean(key)
+            elif 'DoRegression'.lower() in key.lower():
+                self.doRegression = config[arch].getboolean(key)
+            elif 'DoML'.lower() in key.lower():
+                self.doML = config[arch].getboolean(key)
+            elif 'DoFiTQun'.lower() in key.lower():
+                self.doFiTQun = config[arch].getboolean(key)
+            elif 'DoCombination'.lower() in key.lower():
+                self.doCombination = config[arch].getboolean(key)
+            elif 'NetworkArchitecture'.lower() in key.lower():
+                self.arch = config[arch][key]
+            elif 'mlPath'.lower() in key.lower():
+                ml_path = config[arch][key]
+                self.mlPath = ml_path
+            elif 'fitqunPath'.lower() in key.lower():
+                fitqun_path = config[arch][key]
+                self.fitqunPath = fitqun_path
+            elif 'plotName'.lower() in key.lower():
+                plot_name = config[arch][key]
+                self.plotName = plot_name
+            elif 'target'.lower() in key.lower():
+                target = config[arch][key]
+                self.target = target
+            elif 'PlotName'.lower() in key.lower():
+                plotName = config[arch][key]
+                self.plotName = plotName
+            elif 'particleLabel'.lower() in key.lower():
+                particle_label = config[arch][key]
+                self.particleLabel = int(particle_label)
+            elif 'signalLabels'.lower() in key.lower():
+                if ',' in config[arch][key]:
+                    self.signalLabels = self.getListOfInput(config[arch][key], int)
+                    self.list_for_sweep.append(self.signalLabels)
+                else:
+                    self.signalLabels = int(config[arch][key])
+            elif 'bkgLabels'.lower() in key.lower():
+                if ',' in config[arch][key]:
+                    self.bkgLabels = self.getListOfInput(config[arch][key], int)
+                    self.list_for_sweep.append(self.bkgLabels)
+                else:
+                    self.bkgLabels = int(config[arch][key])
+            else:
+                print(f'Variable {key} not found, exiting')
+                return 0
+
+    def save_options(self,filepath,filename):
+        """Save the class and its variables in file
+
+        Args:
+            filepath (_type_): Path to file
+            filename (_type_): Name of file
+        """
+        with open(filepath+'/'+filename,'wb') as f:
+            pickle.dump(self,f)
+
+    def load_options(self,filepath,filename):
+        """Load the class and its variables from file
+
+        Args:
+            filepath (_type_): Path to file
+            filename (_type_): Name of file
+
+        Returns:
+            WCSimOptions class object: Loaded class
+        """
+        with open(filepath+'/'+filename,'rb') as f:
+            new_options = pickle.load(f)
+            return new_options
+
+    def set_output_directory(self):
+        """Makes an output file as given in the arguments
+        """
+        if not(os.path.exists(self.outputPlotPath) and os.path.isdir(self.outputPlotPath)):
+            try:
+                os.makedirs(self.outputPlotPath)
+                os.makedirs(self.outputPlotPath+'/scan/')
+            except FileExistsError as error:
+                print("Directory " + str(self.outputPlotPath) +" already exists")
+                if self.batch is True:
+                    exit
+
+    def getListOfInput(self, list_of_inputs, type):
+        inputs = list_of_inputs.split(",")
+        inputs = list(map(type, inputs))
+        return inputs

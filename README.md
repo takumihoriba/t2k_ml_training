@@ -21,11 +21,49 @@ Once you've cloned the repo and initialized the submodule, there is some setup t
 
 Once you've cloned the directory, there is some setup to do.
 
+#### On Triumf-ml1
+
 You can use a singularity container to use the python packages needed to run this code. Simply run this everytime you log in:
 
 ```
-singularity shell --nv -B /fast_scratch -B /data -B /home /fast_scratch/triumfmlutils/containers/base_ml_recommended.simg
+singularity shell --nv -B /fast_scratch_2/ -B /fast_scratch -B /data -B /home /fast_scratch/triumfmlutils/containers/base_ml_recommended.simg
 ```
+
+If there are any packages missing you should be able to pip install them in the singularity container
+
+#### On cedar
+
+To make python environments, I followed the [compute canada webite](https://docs.alliancecan.ca/wiki/Python#Creating_and_using_a_virtual_environment).
+
+Specifically:
+
+To create a python virtual environment, run the following, where ENV is your environment name
+
+```
+module load StdEnv/2020
+module load python/3.10.2
+module load scipy-stack
+module load gcc/9.3.0
+module load root/6.20.04
+virtualenv --no-download ENV
+source ENV/bin/activate
+pip install --no-index -r requirements.txt
+```
+
+This will load pyton packages, make a new virtual environment ENV, and download all needed packages. It may take a few minutes.
+
+Now every time you want to use the environment, simply do
+
+```
+module load StdEnv/2020
+module load python/3.10.2
+module load scipy-stack
+module load gcc/9.3.0
+module load root/6.20.04
+source ENV/bin/activate
+```
+
+
 
 ### Runner file
 
@@ -39,12 +77,34 @@ If you want to run training, in _args\_training.txt_, set
 --doTraining
 ```
 
-where training_input is a path and name to text file with absolute path of the directory where the training data is. 
 
 #### Training configuration file
 
-Use _util\_config.ini_ to choose all the settings for training. This includes input file path, output model path, which architecture, how many epochs, etc. 
-This will be managed by the _utils_ class in _runner\_util.py_. Right now ResNet and PointNet are supported, with their own independent set of settings. The _utils_ class object is typically called _settings_, and is used throughout the code to call up settings from _util\_config.ini_ when needed.
+Use _config/util\_config.ini_ to choose some settings for training. This includes input file path, output model path, which architecture, etc. 
+This will be managed by the _utils_ class in _runner\_util.py_. Right now ResNet and PointNet are supported, with their own independent set of settings. The _utils_ class object is typically called _settings_, and is used throughout the code to call up settings from _config/util\_config.ini_ when needed.
+
+For more fine-grained control of training, there is also _WatChMaL/config/t2k\_resnet\_train.yaml_. Here you can change even more options. Be careful, as the options chosen in _config/util\_config.ini_ will overwrite those in the yaml file.
+
+#### Training on Triumf-ml1
+
+In _config/util\_config.ini_ you want to make sure _batchSystem_ is set to False. Then go as normal. I recommend using a screen session for training as it may take a long time.
+
+#### Training on Cedar
+
+We can make use of the batch system on cedar to run training on GPU machines.
+
+In _config/util\_config.ini_ you want to make sure _batchSystem_ is set to True.
+Then in _t2k\_ml\_training\_job.sh_, on the line which copies a file to the GPU machine, you want to make sure it is the right file that you specify in _config/util\_config.ini_ as _InputPath_.
+Make sure in _training\_runner.py_ the file you use as inputPath in the _init\_training_ function has the same end (e.g. digi\_combine.hy) as the file you want to use.
+
+Finally you are ready to send the job. In a directory in \project or \scratch space do
+
+```
+sbatch --time=72:00:00 --gres=gpu:v100l:4 --mem=0 --cpus-per-task=32 --account=rpp-blairt2k --job-name=sk_pos_elec /home/fcormier/t2k/ml/training/t2k_ml_training/t2k_ml_training_job.sh
+```
+
+You can change the job name to a more meaningful one for job tracking purposes. This command asks for a whole machine with 4 GPUs, if this is overkill check [this](https://docs.alliancecan.ca/wiki/Using_GPUs_with_Slurm) for more comamnds.
+
 
 ### Preparing new files for training
 
@@ -72,24 +132,12 @@ You should set the variables
 
 in _args\_training.txt_ to specify the input roofile to calculate the indices from, and the output directory where we will save all the numpy files with indices. The script should generate one .npz file per fold you specify.
 
-To then train on that rootfile with the indices files you crated, in _util\_config.ini_ set InputPath to the path+name of the rootfile, and IndicesFile to a comma separated list of path+name of the .npz indices files you created with this script. 
+To then train on that rootfile with the indices files you crated, in _config/util\_config.ini_ set InputPath to the path+name of the rootfile, and IndicesFile to a comma separated list of path+name of the .npz indices files you created with this script. 
 
 There is another important file to change the options. From the main directory navigate to _WatChMaL/config/t2k\_resnet\_train.yaml_ (for ResNet training). Here you can change more options.
 
-To know which file to use to change options: _training\_runner.py_ has a function called _init\_training_ which reads in _util\_config.ini_ and overwrites the options listed in training\_runner.py in _t2k\_resnet\_train.yaml_. The rest of the options are defined in the .yaml file, regardless of if they are defined in _util\_config.ini_.
+To know which file to use to change options: _training\_runner.py_ has a function called _init\_training_ which reads in _config/util\_config.ini_ and overwrites the options listed in training\_runner.py in _t2k\_resnet\_train.yaml_. The rest of the options are defined in the .yaml file, regardless of if they are defined in _config/util\_config.ini_.
 
-### After Training
-
-Files will be written out to the _OutputPath_ directory you specify in _util\_config.ini_. Additionally, some stats are quickly calculated at the end of each training fold and saved in _training_stats.xml_ in the output path directory. 
-
-Once all trainings are done (if doing multiple folds), you can run some scripts to calculate some overall training stats and output some plots. To do this, in _args\_training.txt_ set the options
-
-```
---doComparison
---comparisonFolder=
-```
-
-where comparisonFolder is the _outputPath_ where your training files were output. It should contain _training_stats.xml_ and all the other output files from training. The script will print out overall stats from training and create a sub-directory called _plots_ in _comparisonFolder_ showing some efficiency plots.
 
 If you would like to compare to FiTQun performance you need to add a fitqun_combine.hy file to this folder and then those results will be automatically added to the generated plots. 
 
@@ -104,6 +152,19 @@ You can run the evaluation step on an already trained network with options
 ```
 
 The input directory has to have a trained network weights to load, in a .pth file. Output will then have all the numpy files output.
+
+### Analysis
+
+To analyze the results of a training.
+
+In _args\_training.txt_, you have to set  
+
+```
+--doAnalysis
+```
+
+Options to decide what to run are in the config file _config/analysis\_config.ini_. The analysis expects that evaluation on the test set has been run on that particular training run, either at the end of training or through the running Evaluation as described above. If there are errors due to files missing, it may be because evaluation of the test set has not been run.
+
 
 
 ### (OBSOLETE) Summarizing training
