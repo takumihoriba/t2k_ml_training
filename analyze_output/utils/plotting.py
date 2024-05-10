@@ -96,11 +96,11 @@ def plot_binned_values(ax, func, values, binning, selection=None, errors=False, 
         plot_args.setdefault('marker', 'o')
         ax.plot(x, y, **plot_args)
 
-def softmax_plots(softmax_to_plot, softmax_names, extra_label, file_path='outputs/classification/', range=[0,1]):
+def softmax_plots(softmax_to_plot, softmax_names, extra_label, file_path='outputs/classification/', range=[0,1], bins=100):
     string=''
     f, ax = plt.subplots(1,1)
     for softmax, name in zip(softmax_to_plot, softmax_names):
-        ax.hist(softmax, range=range, bins=100, label=name, alpha=0.7)
+        ax.hist(softmax, range=range, bins=bins, label=name, alpha=0.7)
         string = string + '_'+name
 
     anchored_text = AnchoredText(extra_label, loc='center')

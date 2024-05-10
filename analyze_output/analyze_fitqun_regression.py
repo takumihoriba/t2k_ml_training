@@ -33,7 +33,7 @@ def analyze_fitqun_regression(settings):
          None
      '''
      # get values out of fitqun file, where mu_1rpos and e_1rpos are the positions of muons and electrons respectively
-     (_, labels, _, fitqun_hash), (mu_1rpos, e_1rpos, mu_1rdir, e_1rdir, mu_1rmom, e_1rmom) = fq.read_fitqun_file(settings.inputPath+'/fitqun_combine.hy', regression=True)
+     (_, labels, _, fitqun_hash), (mu_1rpos, e_1rpos, pi_1rpos, mu_1rdir, e_1rdir, pi_1rdir, mu_1rmom, e_1rmom, pi_1rmom) = fq.read_fitqun_file(settings.fitqunPath+'/fitqun_combine.hy', regression=True)
 
      # read in the indices file
      idx = np.array(sorted(np.load(settings.mlPath + "/indices.npy")))
@@ -101,10 +101,13 @@ def analyze_fitqun_regression(settings):
      fitqun_labels = labels[comm2]
      fitqun_mu_1rpos = mu_1rpos[comm1].squeeze() 
      fitqun_e_1rpos = e_1rpos[comm1].squeeze() 
+     fitqun_pi_1rpos = pi_1rpos[comm1].squeeze() 
      fitqun_mu_1rdir = mu_1rdir[comm1].squeeze() 
      fitqun_e_1rdir = e_1rdir[comm1].squeeze() 
+     fitqun_pi_1rdir = pi_1rdir[comm1].squeeze() 
      fitqun_mu_1rmom = mu_1rmom[comm1].squeeze() 
      fitqun_e_1rmom = e_1rmom[comm1].squeeze() 
+     fitqun_pi_1rmom = pi_1rmom[comm1].squeeze() 
      positions = positions[comm2]
      directions = directions[comm2]
      momenta = momenta[comm2]
@@ -118,17 +121,21 @@ def analyze_fitqun_regression(settings):
          truth = positions
          fitqun_mu = fitqun_mu_1rpos
          fitqun_e = fitqun_e_1rpos
+         fitqun_pi = fitqun_pi_1rpos
      elif "directions" in settings.target:
         truth = directions
         fitqun_mu = fitqun_mu_1rdir
         fitqun_e = fitqun_e_1rdir
+        fitqun_pi = fitqun_pi_1rdir
      elif "momentum" in settings.target or "momenta" in settings.target:
         truth = momenta
         fitqun_mu = fitqun_mu_1rmom
         fitqun_e = fitqun_e_1rmom
+        fitqun_pi = fitqun_pi_1rmom
 
      true_0, pred_0, ve_0, tw_0, nhits_0, dir_0 = [], [], [], [], [], []
      true_1, pred_1, ve_1, tw_1, nhits_1, dir_1 = [], [], [], [], [], []
+     true_2, pred_2, ve_2, tw_2, nhits_2, dir_2 = [], [], [], [], [], []
      for i in range(len(fitqun_labels)):
          # LABEL 0 - muons  
          if fitqun_labels[i] == 0:
@@ -138,6 +145,14 @@ def analyze_fitqun_regression(settings):
              tw_0.append(towall[i])
              nhits_0.append(nhits[i])
              dir_0.append(directions[i])
+
+         if fitqun_labels[i] == 2:
+             true_2.append(truth[i])
+             pred_2.append(fitqun_pi[i])
+             ve_2.append(visible_energy[i])
+             tw_2.append(towall[i])
+             nhits_2.append(nhits[i])
+             dir_2.append(directions[i])
 
          # LABEL 1 - electrons  
          else:
@@ -151,12 +166,16 @@ def analyze_fitqun_regression(settings):
      # convert lists to arrayss
      true_0 = np.array(true_0)
      true_1 = np.array(true_1)
+     true_2 = np.array(true_2)
      pred_0 = np.array(pred_0)
      pred_1 = np.array(pred_1)
+     pred_2 = np.array(pred_2)
      tw_0 = np.array(tw_0)
      tw_1 = np.array(tw_1)
+     tw_2 = np.array(tw_2)
      dir_0 = np.array(dir_0)
      dir_1 = np.array(dir_1)
+     dir_2 = np.array(dir_2)
 
      #print(true_0.shape)
      single_analysis = []
@@ -178,6 +197,16 @@ def analyze_fitqun_regression(settings):
         bin_dict, quant_dict, quant_error_dict, mu_dict, mu_error_dict = regression_analysis_perVar(from_path=False, true=true_1, pred=pred_1, dir=dir_1, target = settings.target, extra_string="fiTQun_"+settings.plotName, save_plots=False, variable=tw_1)
         multi_analysis['towall'] = [bin_dict, quant_dict, quant_error_dict, mu_dict, mu_error_dict]
         bin_dict, quant_dict, quant_error_dict, mu_dict, mu_error_dict = regression_analysis_perVar(from_path=False, true=true_1, pred=pred_1, dir=dir_1, target = settings.target, extra_string="fiTQun_"+settings.plotName, save_plots=False, variable=ve_1)
+        multi_analysis['ve'] = [bin_dict, quant_dict, quant_error_dict, mu_dict, mu_error_dict]
+
+     if settings.particleLabel==2:
+        print('######## fiTQun PION EVENTS ########')
+        #regression_analysis_perVar(from_path=False, true=true_1, pred=pred_1, target = target, extra_string="fitqun_Electrons", save_plots=False, variable=ve_1)
+        vertex_axis, quantile_lst, quantile_error_lst, median_lst, median_error_lst = regression_analysis(from_path=False, true=true_2, pred=pred_2, dir=dir_2, target=settings.target, extra_string="fiTQun_"+settings.plotName, save_plots=True, plot_path = settings.outputPlotPath)
+        single_analysis = [vertex_axis, quantile_lst, quantile_error_lst, median_lst, median_error_lst] 
+        bin_dict, quant_dict, quant_error_dict, mu_dict, mu_error_dict = regression_analysis_perVar(from_path=False, true=true_2, pred=pred_2, dir=dir_2, target = settings.target, extra_string="fiTQun_"+settings.plotName, save_plots=False, variable=tw_2)
+        multi_analysis['towall'] = [bin_dict, quant_dict, quant_error_dict, mu_dict, mu_error_dict]
+        bin_dict, quant_dict, quant_error_dict, mu_dict, mu_error_dict = regression_analysis_perVar(from_path=False, true=true_2, pred=pred_2, dir=dir_2, target = settings.target, extra_string="fiTQun_"+settings.plotName, save_plots=False, variable=ve_2)
         multi_analysis['ve'] = [bin_dict, quant_dict, quant_error_dict, mu_dict, mu_error_dict]
 
      return single_analysis, multi_analysis

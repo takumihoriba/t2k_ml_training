@@ -70,15 +70,17 @@ def analyze_regression(settings):
         results.add_global_perf("ML", single_ml_analysis[0], single_ml_analysis[1], single_ml_analysis[2], single_ml_analysis[3], single_ml_analysis[4])
         results.add_var_perf("ML",multi_ml_analysis)
 
-    #print(f"Quantile: {results.get_var_perf('ML', variable='ve', axis='Angle', value='quantile')}")
-    #print(f"Median: {results.get_var_perf('ML', variable='ve', axis='Angle', value='median')}")
-
     if settings.doFiTQun:
         #vertex_axis_fq, quantile_lst_fq, quantile_error_lst_fq, median_lst_fq, median_error_lst_fq = analyze_fitqun_regression(settings)
         single_fq_analysis, multi_fq_analysis = analyze_fitqun_regression(settings) 
         results.add_global_perf("fitqun", single_fq_analysis[0], single_fq_analysis[1], single_fq_analysis[2], single_fq_analysis[3], single_fq_analysis[4])
         results.add_var_perf("fitqun",multi_fq_analysis)
         #results.add_global_perf("fitqun", vertex_axis_fq, quantile_lst_fq, quantile_error_lst_fq, median_lst_fq, median_error_lst_fq)
+
+
+    #print(f"Quantile: {results.get_var_perf('ML', variable='ve', axis='Angle', value='quantile')}")
+    #print(f"Median: {results.get_var_perf('ML', variable='ve', axis='Angle', value='median')}")
+
     
     #print(results.get_global_perf("fitqun", axis="Angle", value="quantile"))
     #print(results.get_global_perf("ML", axis="Angle", value="quantile"))

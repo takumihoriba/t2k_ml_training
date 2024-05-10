@@ -57,24 +57,27 @@ def analyze_classification(settings):
     # calculate number of hits 
     events_hits_index = np.append(hy['event_hits_index'], hy['hit_pmt'].shape[0])
     nhits = (events_hits_index[idx+1] - events_hits_index[idx]).squeeze()
+    total_charge = np.array([part.sum() for part in np.split(hy['hit_charge'], np.cumsum(nhits))[:-1]])
 
 
     #softmax_sig = [softmax[label] for label in settings.signalLabels]
     #softmax_bkg = [softmax[label] for label in settings.bkgLabels]
 
-    softmax_e = softmax[labels==1]
-    softmax_mu = softmax[labels==0]
-    softmax_pi = softmax[labels==2]
+    softmax_e = softmax[labels_test==1]
+    softmax_mu = softmax[labels_test==0]
+    softmax_pi = softmax[labels_test==2]
+
+    if settings.signalLabels==1:
+        pass
+        #softmax_plots([softmax_e[:,1], softmax_e[:,0]+softmax_e[:,2]], ['e-score', 'mu+pi-score'], extra_label='Electrons only', file_path=settings.outputPlotPath)
+        #softmax_plots([softmax_mu[:,1], softmax_mu[:,0]+softmax_mu[:,2]], ['e-score', 'mu+pi-score'], extra_label='Muons only', file_path=settings.outputPlotPath)
+        #softmax_plots([softmax_pi[:,1], softmax_pi[:,0]+softmax_pi[:,2]], ['e-score', 'mu+pi-score'], extra_label='Pi+ only', file_path=settings.outputPlotPath)
 
     if settings.signalLabels==0:
-        softmax_plots([softmax_e[:,1], softmax_e[:,0]+softmax_e[:,2]], ['e-score', 'mu+pi-score'], extra_label='Electrons only')
-        softmax_plots([softmax_mu[:,1], softmax_mu[:,0]+softmax_mu[:,2]], ['e-score', 'mu+pi-score'], extra_label='Muons only')
-        softmax_plots([softmax_pi[:,1], softmax_pi[:,0]+softmax_pi[:,2]], ['e-score', 'mu+pi-score'], extra_label='Pi+ only')
+        softmax_plots([softmax_pi[:,0], softmax_pi[:,2]], ['mu-score', 'pi-score'], extra_label='Pi+ only', file_path=settings.outputPlotPath, bins=50)
+        softmax_plots([softmax_mu[:,0], softmax_mu[:,2]], ['mu-score', 'pi-score'], extra_label='Muon only', file_path=settings.outputPlotPath, bins=50)
 
-        softmax_plots([softmax_pi[:,0], softmax_pi[:,2]], ['mu-score', 'pi-score'], extra_label='Pi+ only')
-        softmax_plots([softmax_mu[:,0], softmax_mu[:,2]], ['mu-score', 'pi-score'], extra_label='Muon only')
-
-    softmax_plots([np.log(np.divide(softmax_pi[:,0], softmax_pi[:,2])), np.log(np.divide(softmax_mu[:,0], softmax_mu[:,2]))], ['Pi+ only','Muons only'], extra_label='ln mu over pi', range=[-100,100])
+    #softmax_plots([np.log(np.divide(softmax_pi[:,0], softmax_pi[:,2])), np.log(np.divide(softmax_mu[:,0], softmax_mu[:,2]))], ['Pi+ only','Muons only'], extra_label='ln mu over pi', range=[-100,100], file_path=settings.outputPlotPath)
 
 
     #Save ids and rootfiles to compare to fitqun, after applying cuts
@@ -117,6 +120,7 @@ def analyze_classification(settings):
         print(len(comm2))
 
         fitqun_matched_energies = energies[comm2]
+        fitqun_total_charge = total_charge[comm2]
         fitqun_dwall = dwall[comm2]
         fitqun_az = (angles[:,1]*180/np.pi)[comm2]
         fitqun_polar = np.cos(angles[:,0])[comm2] 
@@ -160,6 +164,7 @@ def analyze_classification(settings):
     polar_binning = get_binning(np.cos(angles[:,0]), 10, -1, 1)
     az_binning = get_binning(angles[:,1]*180/np.pi, 10, -180, 180)
     mom_binning = get_binning(momentum, 9, minimum=100, maximum=1000)
+    total_charge_binning = get_binning(total_charge, 20, minimum=0, maximum=4000)
     visible_energy_binning = get_binning(ml_visible_energy, 10, minimum=0, maximum=1000)
     dwall_binning = get_binning(dwall, 15, minimum=0, maximum=1600)
     towall_binning = get_binning(towall, 30, minimum=0, maximum=3000)
@@ -180,6 +185,7 @@ def analyze_classification(settings):
         fitqun_basic_cuts = ((fitqun_hy_electrons | fitqun_hy_muons) & (fitqun_towall > 100))
         fitqun_mom_binning = get_binning(fitqun_mom, 9, minimum=100, maximum=1000)
         fitqun_ve_binning = get_binning(fitqun_visible_energy, 10, minimum=0, maximum=1000)
+        fitqun_tc_binning = get_binning(fitqun_total_charge, 20, minimum=0, maximum=4000)
         fitqun_towall_binning = get_binning(fitqun_towall, 30, minimum=0, maximum=3000)
         fitqun_az_binning = get_binning(fitqun_az, 10, minimum=-180, maximum=180)
         fitqun_polar_binning = get_binning(fitqun_polar, 10, minimum=-1, maximum=1)
@@ -202,7 +208,7 @@ def analyze_classification(settings):
         fitqun_pi_eff = np.sum(cut_pi_discr[fitqun_labels[fitqun_basic_cuts] ==0])/len(cut_pi_discr[fitqun_labels[fitqun_basic_cuts]==0])
         fitqun_bkg_rej = np.abs(np.sum(cut_pi_discr[fitqun_labels[fitqun_basic_cuts] == 2]-1))/len(cut_pi_discr[fitqun_labels[fitqun_basic_cuts]==2])
         print(f"fiTQun signal efficiency: {fitqun_pi_eff}, fiTQun bkg rejection: {fitqun_bkg_rej}")
-        fig_roc, ax_roc = plot_rocs(run_result, e_label, mu_label, selection=basic_cuts, x_label="Electron Tagging Efficiency", y_label="Muon Rejection",
+        fig_roc, ax_roc = plot_rocs(run_result, e_label, mu_label, selection=basic_cuts, x_label="Muon Tagging Efficiency", y_label="Pi+ Rejection",
                 legend='best', mode='rejection', fitqun=(fitqun_pi_eff, fitqun_bkg_rej), label='ML')
         fig_roc.savefig(settings.outputPlotPath + '/ml_pi_roc.png', format='png')
 
@@ -221,11 +227,13 @@ def analyze_classification(settings):
     e_az_fig, az_ax_e = plot_efficiency_profile(run_result, az_binning, select_labels=e_label, x_label="Azimuth [Degree]", y_label="Muon Signal PID Efficiency [%]", errors=True, x_errors=False, label=label)
     e_mom_fig, mom_ax_e = plot_efficiency_profile(run_result, mom_binning, select_labels=e_label, x_label="True Momentum", y_label="Muon Signal PID Efficiency [%]", errors=True, x_errors=False, label=label)
     e_ve_fig, ve_ax_e = plot_efficiency_profile(run_result, visible_energy_binning, select_labels=e_label, x_label="True Visible Energy [MeV]", y_label="Muon Signal PID Efficiency [%]", errors=True, x_errors=False, label=label)
+    e_tc_fig, tc_ax_e = plot_efficiency_profile(run_result, total_charge_binning, select_labels=e_label, x_label="Total PMT Charge", y_label="Muon Signal PID Efficiency [%]", errors=True, x_errors=False, label=label)
     e_dwall_fig, dwall_ax = plot_efficiency_profile(run_result, dwall_binning, select_labels=e_label, x_label="Distance from Detector Wall [cm]", y_label="Muon Signal PID Efficiency [%]", errors=True, x_errors=False, label=label)
     e_towall_fig, towall_ax_e = plot_efficiency_profile(run_result, towall_binning, select_labels=e_label, x_label="Distance to Wall Along Particle Direction [cm]  ", y_label="Muon Signal PID Efficiency [%]", errors=True, x_errors=False, label=label)
     if do_fitqun:
         e_mom_fig_fitqun, mom_ax_fitqun_e = plot_efficiency_profile(fitqun_pi_run_result, fitqun_mom_binning, select_labels=e_label, x_label="fiTQun e Momentum [MeV]", y_label="fiTQun Electron Signal PID Efficiency [%]", errors=True, x_errors=False, label='fitqun'+label)
         e_ve_fig_fitqun, ve_ax_fitqun_e = plot_efficiency_profile(fitqun_pi_run_result, fitqun_ve_binning, select_labels=e_label, x_label="fiTQun Visible energy [MeV]", y_label="fiTQun Electron Signal PID Efficiency [%]", errors=True, x_errors=False, label='fitqun'+label)
+        e_tc_fig_fitqun, tc_ax_fitqun_e = plot_efficiency_profile(fitqun_pi_run_result, fitqun_tc_binning, select_labels=e_label, x_label="fiTQun Total Charge", y_label="fiTQun Electron Signal PID Efficiency [%]", errors=True, x_errors=False, label='fitqun'+label)
         e_towall_fig_fitqun, towall_ax_fitqun_e = plot_efficiency_profile(fitqun_pi_run_result, fitqun_towall_binning, select_labels=e_label, x_label="Truth toWall [cm]", y_label="fiTQun Electron Signal PID Efficiency [%]", errors=True, x_errors=False, label='fitqun'+label)
         e_az_fig_fitqun, az_ax_fitqun_e = plot_efficiency_profile(fitqun_pi_run_result, fitqun_az_binning, select_labels=e_label, x_label="Truth Azimuth [deg]", y_label="fiTQun Electron Signal PID Efficiency [%]", errors=True, x_errors=False, label='fitqun'+label)
 
@@ -234,11 +242,13 @@ def analyze_classification(settings):
     mu_az_fig, az_ax_mu = plot_efficiency_profile(run_result, az_binning, select_labels=mu_label, x_label="Azimuth [Degree]", y_label="Pi+ Background Miss-PID [%]", errors=True, x_errors=False, label=label)
     mu_mom_fig, mom_ax_mu = plot_efficiency_profile(run_result, mom_binning, select_labels=mu_label, x_label="True Momentum", y_label="Pi+ Background Miss-PID [%]", errors=True, x_errors=False, label=label)
     mu_ve_fig, ve_ax_mu = plot_efficiency_profile(run_result, visible_energy_binning, select_labels=mu_label, x_label="True Visible Energy [MeV]", y_label="Pi+ Background Miss-PID [%]", errors=True, x_errors=False, label=label)
+    mu_tc_fig, tc_ax_mu = plot_efficiency_profile(run_result, total_charge_binning, select_labels=mu_label, x_label="Total Charge", y_label="Pi+ Background Miss-PID [%]", errors=True, x_errors=False, label=label)
     mu_towall_fig, towall_ax_mu = plot_efficiency_profile(run_result, towall_binning, select_labels=mu_label, x_label="Distance to Wall Along Particle Direction [cm]  ", y_label="Pi+ Background Miss-PID [%]", errors=True, x_errors=False, label=label)
     mu_dwall_fig, dwall_ax = plot_efficiency_profile(run_result, dwall_binning, select_labels=mu_label, x_label="Distance from Detector Wall [cm]", y_label="Pi+ Background Miss-PID [%]", errors=True, x_errors=False, label=label)
     if do_fitqun:
         mu_mom_fig_fitqun, mom_ax_fitqun_mu = plot_efficiency_profile(fitqun_pi_run_result, fitqun_mom_binning, select_labels=mu_label, x_label="fiTQun e Momentum", y_label="fiTQun Pi+ Background Miss-PID [%]", errors=True, x_errors=False, label=label)
-        mu_ve_fig_fitqun, ve_ax_fitqun_mu = plot_efficiency_profile(fitqun_pi_run_result, fitqun_ve_binning, select_labels=mu_label, x_label="fiTQun e Momentum", y_label="fiTQun Muon Background Miss-PID [%]", errors=True, x_errors=False, label=label)
+        mu_ve_fig_fitqun, ve_ax_fitqun_mu = plot_efficiency_profile(fitqun_pi_run_result, fitqun_ve_binning, select_labels=mu_label, x_label="fiTQun Visible Energy [MeV]", y_label="fiTQun Muon Background Miss-PID [%]", errors=True, x_errors=False, label=label)
+        mu_tc_fig_fitqun, tc_ax_fitqun_mu = plot_efficiency_profile(fitqun_pi_run_result, fitqun_tc_binning, select_labels=mu_label, x_label="fiTQun Total Charge", y_label="fiTQun Muon Background Miss-PID [%]", errors=True, x_errors=False, label=label)
         mu_towall_fig_fitqun, towall_ax_fitqun_mu = plot_efficiency_profile(fitqun_pi_run_result, fitqun_towall_binning, select_labels=mu_label, x_label="Towall [cm]", y_label="fiTQun Muon Background Miss-PID [%]", errors=True, x_errors=False, label=label)
         mu_az_fig_fitqun, az_ax_fitqun_mu = plot_efficiency_profile(fitqun_pi_run_result, fitqun_az_binning, select_labels=mu_label, x_label="Towall [cm]", y_label="fiTQun Muon Background Miss-PID [%]", errors=True, x_errors=False, label=label)
 
@@ -247,6 +257,7 @@ def analyze_classification(settings):
     e_az_fig.savefig(settings.outputPlotPath + 'e_azimuthal_efficiency.png', format='png')
     e_mom_fig.savefig(settings.outputPlotPath + 'e_momentum_efficiency.png', format='png')
     e_ve_fig.savefig(settings.outputPlotPath + 'e_ve_efficiency.png', format='png')
+    e_tc_fig.savefig(settings.outputPlotPath + 'e_tc_efficiency.png', format='png')
     if do_fitqun:
         e_mom_fig_fitqun.savefig(settings.outputPlotPath + 'fitqun_e_momentum_efficiency.png', format='png')
     e_dwall_fig.savefig(settings.outputPlotPath + 'e_dwall_efficiency.png', format='png')
@@ -264,6 +275,7 @@ def analyze_classification(settings):
     if do_fitqun:
         plot_fitqun_comparison(settings.outputPlotPath, mom_ax_e, mom_ax_fitqun_e, mom_ax_mu, mom_ax_fitqun_mu, 'mom_combine', 'Truth Momentum [MeV]')
         plot_fitqun_comparison(settings.outputPlotPath, ve_ax_e, ve_ax_fitqun_e, ve_ax_mu, ve_ax_fitqun_mu, 've_combine', 'Truth Visible Energy [MeV]')
+        plot_fitqun_comparison(settings.outputPlotPath, tc_ax_e, tc_ax_fitqun_e, tc_ax_mu, tc_ax_fitqun_mu, 'tc_combine', 'Total Charge')
         plot_fitqun_comparison(settings.outputPlotPath, towall_ax_e, towall_ax_fitqun_e, towall_ax_mu, towall_ax_fitqun_mu, 'towall_combine', 'Towall [cm]')
         #plot_fitqun_comparison(plot_output, az_ax_e, az_ax_fitqun_e, az_ax_mu, az_ax_fitqun_mu, 'az_combine', 'Truth Azimuth [deg]')
 

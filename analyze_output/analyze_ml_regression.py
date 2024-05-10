@@ -24,9 +24,7 @@ def analyze_ml_regression(settings):
      #First argument is where to save plot
      #Second one where to get data
      files = settings.mlPath
-     #Third argument the target variable
      target = str(settings.target)
-     #Fourth argument if you want to only keep indices that match fitqun file
      preds = np.load(files+'predicted_'+target+'.npy')
      truth = np.load(files+target+'.npy')
      labels = np.load(files + 'labels.npy')
@@ -34,7 +32,7 @@ def analyze_ml_regression(settings):
 
 
      if settings.doCombination:
-          (_, fq_labels, _, fitqun_hash), (mu_1rpos, e_1rpos, mu_1rdir, e_1rdir, mu_1rmom, e_1rmom) = fq.read_fitqun_file(settings.fitqunPath+'fitqun_combine.hy', regression=True)
+          (_, fq_labels, _, fitqun_hash), (mu_1rpos, e_1rpos, pi_1rpos, mu_1rdir, e_1rdir, pi_1rdir, mu_1rmom, e_1rmom, pi_1rmom) = fq.read_fitqun_file(settings.fitqunPath+'fitqun_combine.hy', regression=True)
           ml_combine_path = settings.inputPath
           hy = h5py.File(ml_combine_path+'combine_combine.hy', "r")
           indices = np.load(files + 'indices.npy')
@@ -42,6 +40,8 @@ def analyze_ml_regression(settings):
           # calculate number of hits 
           events_hits_index = np.append(hy['event_hits_index'], hy['hit_pmt'].shape[0])
           nhits = (events_hits_index[indices+1] - events_hits_index[indices]).squeeze()
+          total_charge = np.array([part.sum() for part in np.split(hy['hit_charge'], np.cumsum(nhits))[:-1]])
+          #total_charge_2 = np.add.reduceat(hy['hit_charge'], np.cumsum(nhits)[:-1])
           rootfiles = np.array(hy['root_files'])[indices].squeeze()
           event_ids = np.array(hy['event_ids'])[indices].squeeze()
           energies = np.array(hy['energies'])[indices].squeeze()
@@ -60,6 +60,7 @@ def analyze_ml_regression(settings):
           labels = labels[(nhits> nhits_cut)]
           energies = energies[(nhits> nhits_cut)]
           directions = directions[(nhits> nhits_cut)]
+          total_charge = total_charge[(nhits> nhits_cut)]
           towall = towall[(nhits> nhits_cut)]
           nhits = nhits[(nhits> nhits_cut)]
 
@@ -71,15 +72,18 @@ def analyze_ml_regression(settings):
           labels = labels[comm2]
           energies = energies[comm2]
           directions = directions[comm2]
+          total_charge = total_charge[comm2]
           towall = towall[comm2]
           nhits = nhits[comm2]
 
      cheThr = list(map(get_cherenkov_threshold, labels))
      visible_energy = energies - cheThr
 
+     print(f"PARTICLE LABEL: {settings.particleLabel}")
      preds = preds[labels==settings.particleLabel]
      truth = truth[labels==settings.particleLabel]
      directions = directions[labels==settings.particleLabel]
+     total_charge = total_charge[labels==settings.particleLabel]
      visible_energy = visible_energy[labels==settings.particleLabel]
      towall = towall[labels==settings.particleLabel]
      nhits = nhits[labels==settings.particleLabel]
@@ -106,10 +110,12 @@ def analyze_ml_regression(settings):
 
      vertex_axis, quantile_lst, quantile_error_lst, median_lst, median_error_lst = regression_analysis(from_path=False, true=truth_0, pred=pred_0, dir = directions, target=target, extra_string="ML_"+settings.plotName, save_plots=True, plot_path = settings.outputPlotPath)
      single_analysis = [vertex_axis, quantile_lst, quantile_error_lst, median_lst, median_error_lst] 
-     bin_dict, quant_dict, quant_error_dict, mu_dict, mu_error_dict = regression_analysis_perVar(from_path=False, true=truth_0, pred=pred_0, dir = directions, target=target, extra_string="ML_"+settings.plotName, save_plots=False, variable=towall)
      multi_analysis = {}
+     bin_dict, quant_dict, quant_error_dict, mu_dict, mu_error_dict = regression_analysis_perVar(from_path=False, true=truth_0, pred=pred_0, dir = directions, target=target, extra_string="ML_"+settings.plotName, save_plots=False, variable=towall)
      multi_analysis["towall"] = [bin_dict, quant_dict, quant_error_dict, mu_dict, mu_error_dict]
      bin_dict, quant_dict, quant_error_dict, mu_dict, mu_error_dict = regression_analysis_perVar(from_path=False, true=truth_0, pred=pred_0, dir=directions, target=target,extra_string="ML_"+settings.plotName, save_plots=False, variable=visible_energy)
      multi_analysis["ve"] = [bin_dict, quant_dict, quant_error_dict, mu_dict, mu_error_dict]
+     bin_dict, quant_dict, quant_error_dict, mu_dict, mu_error_dict = regression_analysis_perVar(from_path=False, true=truth_0, pred=pred_0, dir=directions, target=target,extra_string="ML_"+settings.plotName, save_plots=False, variable=total_charge)
+     multi_analysis["tot_charge"] = [bin_dict, quant_dict, quant_error_dict, mu_dict, mu_error_dict]
 
      return single_analysis, multi_analysis 

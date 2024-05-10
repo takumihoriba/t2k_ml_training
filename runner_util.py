@@ -89,7 +89,7 @@ def make_split_file(h5_file,train_val_test_split=[0.70,0.15], output_path='data/
             #print(f'itk length: {len(indices_to_keep)}')
             print(np.ravel(h5py.File(h5_file,mode='r')['labels'])==0)
             print(nhits > 200)
-            indices_to_keep = np.where(np.logical_and(np.ravel(h5py.File(h5_file,mode='r')['label'])==0, nhits > 200))
+            indices_to_keep = np.where(np.logical_and(np.ravel(h5py.File(h5_file,mode='r')['label'])==2, nhits > 200))
             print(indices_to_keep)
             #print(f'itk length after: {indices_to_keep[0].shape}')
             #print(np.unique(nhits > 1000, return_counts=True))

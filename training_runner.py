@@ -103,7 +103,7 @@ def init_training():
 
     settings = utils()
     settings.set_output_directory()
-    default_call = ["python", "WatChMaL/main.py", "--config-name=t2k_resnet_train_classifier"] 
+    default_call = ["python", "WatChMaL/main.py", "--config-name=t2k_resnet_train"] 
     indicesFile = check_list_and_convert(settings.indicesFile)
     if not onCedar:
         inputPath = [settings.inputPath] 
@@ -118,7 +118,7 @@ def init_training():
     perm_output_path = settings.outputPath
     variable_list = ['indicesFile', 'inputPath', 'learningRate', 'weightDecay', 'learningRateDecay', 'featureExtractor',  'stride', 'kernelSize']
     for x in itertools.product(indicesFile, inputPath, lr, weightDecay, lr_decay, featureExtractor, stride, kernelSize):
-        default_call = ["python", "WatChMaL/main.py", "--config-name=t2k_resnet_train_classifier"] 
+        default_call = ["python", "WatChMaL/main.py", "--config-name=t2k_resnet_train"] 
         now = datetime.now()
         dt_string = now.strftime("%d%m%Y-%H%M%S")
         #dt_string = '20092023-101855'
@@ -204,11 +204,11 @@ if args.doEvaluation:
     settings = utils()
     settings.outputPath = args.evaluationOutputDir
     settings.set_output_directory()
-    default_call = ["python", "WatChMaL/main.py", "--config-name=t2k_resnet_eval_classifier"] 
+    default_call = ["python", "WatChMaL/main.py", "--config-name=t2k_resnet_eval"] 
     indicesFile = check_list_and_convert(settings.indicesFile)
     perm_output_path = settings.outputPath
 
-    default_call = ["python", "WatChMaL/main.py", "--config-name=t2k_resnet_eval_classifier"] 
+    default_call = ["python", "WatChMaL/main.py", "--config-name=t2k_resnet_eval"] 
 
 
     settings.outputPath = args.evaluationInputDir

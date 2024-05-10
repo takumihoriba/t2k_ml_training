@@ -79,6 +79,8 @@ def regression_analysis_perVar(from_path=True, dirpath='outputs', combine=True, 
                 var_min=100
         #Round max to nearest 100
         var_max = float(ceil((var_max-divisor)/100.0))*100.
+        if var_max > 4000:
+            var_max=4000
     print(f"var min: {var_min}, var max: {var_max}, var num: {int((var_max-var_min)/divisor)+1}, divisor: {divisor}")
     var_bins = np.linspace(var_min,var_max, num=int((var_max-var_min)/divisor)+1)
     print(f"VAR BINS: {var_bins}")
@@ -171,6 +173,8 @@ def regression_analysis(from_path=True, dirpath='outputs', combine=True, true=No
          vertex_axis.append('Transverse')
      if "directions" in target:
          vertex_axis.append('Angle')
+         vertex_axis.append('Longitudinal Angle')
+         vertex_axis.append('Transverse Angle')
      if "momentum" in target or "energies" in target or "momenta" in target:
          vertex_axis = ['Global']
      xlimit = 200
@@ -217,6 +221,7 @@ def regression_analysis(from_path=True, dirpath='outputs', combine=True, true=No
              temp_pred = transverse_component_pred
              true = np.hstack((true, np.reshape(temp_true, (true.shape[0], 1))))
              pred = np.hstack((pred, np.reshape(temp_pred, (pred.shape[0], 1))))
+
          if "Angle" in vertex_axis[i]:
              unit_vector_pred = np.transpose(np.array([np.divide(pred[:,0],np.linalg.norm(pred[:,0:3], axis=1)), np.divide(pred[:,1],np.linalg.norm(pred[:,0:3], axis=1)), np.divide(pred[:,2],np.linalg.norm(pred[:,0:3], axis=1))]) )
              unit_vector_true = np.transpose(np.array([np.divide(true[:,0],np.linalg.norm(true[:,0:3], axis=1)), np.divide(true[:,1],np.linalg.norm(true[:,0:3], axis=1)), np.divide(true[:,2],np.linalg.norm(true[:,0:3], axis=1))]) )
