@@ -106,7 +106,7 @@ def make_split_file(h5_file,train_val_test_split=[0.70,0.15], output_path='data/
     #indices_to_keep = np.array(range(len(dwall_cut)))[np.where(np.ravel(h5py.File(h5_file,mode='r')['labels'])==1)]
     indices_to_keep = np.array(range(len(dwall_cut)))
     #print(indices_to_keep)
-    fully_contained=True
+    fully_contained=False
     
     with h5py.File(h5_file, mode='r') as h5fw:
         # select indices only with 'keep_event' == True (if key exists), instead of keeping all events
@@ -142,7 +142,7 @@ def make_split_file(h5_file,train_val_test_split=[0.70,0.15], output_path='data/
             if fully_contained:
                 indices_to_keep = np.where(np.logical_and(np.logical_and(towall_compare == True, keep_bool==True),labels==1), nhits > 200)[0] 
             else:
-                indices_to_keep = np.where(np.logical_and(np.logical_and(keep_bool == True, labels==1), nhits > 200))[0] 
+                indices_to_keep = np.where(np.logical_and(np.logical_and(keep_bool == True, keep_bool == True), nhits > 200))[0] 
             print(nhits)
             #indices_to_keep = np.where(keep_bool == True)[0] 
         elif fully_contained:

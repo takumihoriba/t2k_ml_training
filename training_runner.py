@@ -25,7 +25,7 @@ from runner_util import utils, analysisUtils, train_config, make_split_file
 from analysis.utils.binning import get_binning
 
 
-from torchmetrics import AUROC, ROC
+# from torchmetrics import AUROC, ROC
 
 #from lxml import etree
 

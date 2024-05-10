@@ -40,7 +40,7 @@ def analyze_classification(settings):
     #true_positions_array = np.array(np.load(str(newest_directory) + "/true_positions.npy"))
 
     # grab relevent parameters from hy file and only keep the values corresponding to those in the test set
-    hy = h5py.File(settings.inputPath+"/combine_combine.hy", "r")
+    hy = h5py.File(settings.inputPath+"/multi_combine.hy", "r")
     print(hy["labels"].shape)
     print(np.amax(idx))
     angles = np.array(hy['angles'])[idx].squeeze() 
@@ -67,14 +67,14 @@ def analyze_classification(settings):
     softmax_pi = softmax[labels==2]
 
     if settings.signalLabels==0:
-        softmax_plots([softmax_e[:,1], softmax_e[:,0]+softmax_e[:,2]], ['e-score', 'mu+pi-score'], extra_label='Electrons only')
-        softmax_plots([softmax_mu[:,1], softmax_mu[:,0]+softmax_mu[:,2]], ['e-score', 'mu+pi-score'], extra_label='Muons only')
-        softmax_plots([softmax_pi[:,1], softmax_pi[:,0]+softmax_pi[:,2]], ['e-score', 'mu+pi-score'], extra_label='Pi+ only')
+        softmax_plots([softmax_e[:,1], softmax_e[:,0]+softmax_e[:,2]], ['e-score', 'mu+pi-score'], extra_label='Electrons only', file_path=settings.outputPlotPath)
+        softmax_plots([softmax_mu[:,1], softmax_mu[:,0]+softmax_mu[:,2]], ['e-score', 'mu+pi-score'], extra_label='Muons only', file_path=settings.outputPlotPath)
+        softmax_plots([softmax_pi[:,1], softmax_pi[:,0]+softmax_pi[:,2]], ['e-score', 'mu+pi-score'], extra_label='Pi+ only', file_path=settings.outputPlotPath)
 
-        softmax_plots([softmax_pi[:,0], softmax_pi[:,2]], ['mu-score', 'pi-score'], extra_label='Pi+ only')
-        softmax_plots([softmax_mu[:,0], softmax_mu[:,2]], ['mu-score', 'pi-score'], extra_label='Muon only')
+        softmax_plots([softmax_pi[:,0], softmax_pi[:,2]], ['mu-score', 'pi-score'], extra_label='Pi+ only', file_path=settings.outputPlotPath)
+        softmax_plots([softmax_mu[:,0], softmax_mu[:,2]], ['mu-score', 'pi-score'], extra_label='Muon only', file_path=settings.outputPlotPath)
 
-    softmax_plots([np.log(np.divide(softmax_pi[:,0], softmax_pi[:,2])), np.log(np.divide(softmax_mu[:,0], softmax_mu[:,2]))], ['Pi+ only','Muons only'], extra_label='ln mu over pi', range=[-100,100])
+    # softmax_plots([np.log(np.divide(softmax_pi[:,0], softmax_pi[:,2])), np.log(np.divide(softmax_mu[:,0], softmax_mu[:,2]))], ['Pi+ only','Muons only'], extra_label='ln mu over pi', range=[-100,100])
 
 
     #Save ids and rootfiles to compare to fitqun, after applying cuts
@@ -167,7 +167,7 @@ def analyze_classification(settings):
     # create watchmal classification object to be used as runs for plotting the efficiency relative to event angle  
     stride1 = settings.mlPath
     run_result = [WatChMaLClassification(stride1, 'test', labels, idx, basic_cuts, color="blue", linestyle='-')]
-    print(f"UNIQUE IN LABLES: {np.unique(fitqun_labels, return_counts=True)}")
+    # print(f"UNIQUE IN LABLES: {np.unique(fitqun_labels, return_counts=True)}")
 
     
     # for single runs and then can plot the ROC curves with it 
@@ -198,9 +198,12 @@ def analyze_classification(settings):
         #fitqun_pi_eff = np.sum(cut_pi_discr[fitqun_labels[fitqun_basic_cuts] == 1])/len(cut_pi_discr[fitqun_labels[fitqun_basic_cuts]==1])
         #fitqun_bkg_rej = np.abs(np.sum(cut_pi_discr[fitqun_labels[fitqun_basic_cuts] == 0]-1))/len(cut_pi_discr[fitqun_labels[fitqun_basic_cuts]==0])
         #For mu/pi+
-        cut_pi_discr = fitqun_pi_discr[fitqun_basic_cuts]
-        fitqun_pi_eff = np.sum(cut_pi_discr[fitqun_labels[fitqun_basic_cuts] ==0])/len(cut_pi_discr[fitqun_labels[fitqun_basic_cuts]==0])
-        fitqun_bkg_rej = np.abs(np.sum(cut_pi_discr[fitqun_labels[fitqun_basic_cuts] == 2]-1))/len(cut_pi_discr[fitqun_labels[fitqun_basic_cuts]==2])
+        fitqun_pi_eff = -1
+        fitqun_bkg_rej = -1
+        if do_fitqun:
+            cut_pi_discr = fitqun_pi_discr[fitqun_basic_cuts]
+            fitqun_pi_eff = np.sum(cut_pi_discr[fitqun_labels[fitqun_basic_cuts] ==0])/len(cut_pi_discr[fitqun_labels[fitqun_basic_cuts]==0])
+            fitqun_bkg_rej = np.abs(np.sum(cut_pi_discr[fitqun_labels[fitqun_basic_cuts] == 2]-1))/len(cut_pi_discr[fitqun_labels[fitqun_basic_cuts]==2])
         print(f"fiTQun signal efficiency: {fitqun_pi_eff}, fiTQun bkg rejection: {fitqun_bkg_rej}")
         fig_roc, ax_roc = plot_rocs(run_result, e_label, mu_label, selection=basic_cuts, x_label="Electron Tagging Efficiency", y_label="Muon Rejection",
                 legend='best', mode='rejection', fitqun=(fitqun_pi_eff, fitqun_bkg_rej), label='ML')
