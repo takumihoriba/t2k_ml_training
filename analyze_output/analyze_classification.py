@@ -40,7 +40,7 @@ def analyze_classification(settings):
     #true_positions_array = np.array(np.load(str(newest_directory) + "/true_positions.npy"))
 
     # grab relevent parameters from hy file and only keep the values corresponding to those in the test set
-    hy = h5py.File(settings.inputPath+"/multi_combine.hy", "r")
+    hy = h5py.File(settings.inputPath, "r")
     print(hy["labels"].shape)
     print(np.amax(idx))
     angles = np.array(hy['angles'])[idx].squeeze() 
@@ -198,12 +198,13 @@ def analyze_classification(settings):
         #fitqun_pi_eff = np.sum(cut_pi_discr[fitqun_labels[fitqun_basic_cuts] == 1])/len(cut_pi_discr[fitqun_labels[fitqun_basic_cuts]==1])
         #fitqun_bkg_rej = np.abs(np.sum(cut_pi_discr[fitqun_labels[fitqun_basic_cuts] == 0]-1))/len(cut_pi_discr[fitqun_labels[fitqun_basic_cuts]==0])
         #For mu/pi+
-        fitqun_pi_eff = -1
-        fitqun_bkg_rej = -1
-        if do_fitqun:
-            cut_pi_discr = fitqun_pi_discr[fitqun_basic_cuts]
-            fitqun_pi_eff = np.sum(cut_pi_discr[fitqun_labels[fitqun_basic_cuts] ==0])/len(cut_pi_discr[fitqun_labels[fitqun_basic_cuts]==0])
-            fitqun_bkg_rej = np.abs(np.sum(cut_pi_discr[fitqun_labels[fitqun_basic_cuts] == 2]-1))/len(cut_pi_discr[fitqun_labels[fitqun_basic_cuts]==2])
+        # fitqun_pi_eff = -1
+        # fitqun_bkg_rej = -1
+        print(do_fitqun)
+        # if do_fitqun:
+        cut_pi_discr = fitqun_pi_discr[fitqun_basic_cuts]
+        fitqun_pi_eff = np.sum(cut_pi_discr[fitqun_labels[fitqun_basic_cuts] ==0])/len(cut_pi_discr[fitqun_labels[fitqun_basic_cuts]==0])
+        fitqun_bkg_rej = np.abs(np.sum(cut_pi_discr[fitqun_labels[fitqun_basic_cuts] == 2]-1))/len(cut_pi_discr[fitqun_labels[fitqun_basic_cuts]==2])
         print(f"fiTQun signal efficiency: {fitqun_pi_eff}, fiTQun bkg rejection: {fitqun_bkg_rej}")
         fig_roc, ax_roc = plot_rocs(run_result, e_label, mu_label, selection=basic_cuts, x_label="Electron Tagging Efficiency", y_label="Muon Rejection",
                 legend='best', mode='rejection', fitqun=(fitqun_pi_eff, fitqun_bkg_rej), label='ML')

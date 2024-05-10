@@ -16,13 +16,13 @@ import subprocess
 #from analysis.classification import WatChMaLClassification
 #from analysis.classification import plot_efficiency_profile
 #from analysis.utils.plotting import plot_legend
-import analysis.utils.math as math
+import WatChMaL.analysis.utils.math as math
 
 from analyze_output.analyze_regression import analyze_regression
 from analyze_output.analyze_classification import analyze_classification
 
 from runner_util import utils, analysisUtils, train_config, make_split_file
-from analysis.utils.binning import get_binning
+from WatChMaL.analysis.utils.binning import get_binning
 
 
 # from torchmetrics import AUROC, ROC
