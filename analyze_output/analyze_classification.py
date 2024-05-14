@@ -31,16 +31,18 @@ from math import log10, floor, ceil
 def analyze_classification(settings):
 
 
-    # retrieve test indices
+    # retrieve test indices.
+    # must use correct indices for dataset.
     idx = np.array(sorted(np.load(str(settings.mlPath) + "/indices.npy")))
     idx = np.unique(idx)
     softmax = np.array(np.load(str(settings.mlPath) + "/softmax.npy"))
+    
     labels_test = np.array(np.load(str(settings.mlPath) + "/labels.npy"))
     #positions_array = np.array(np.load(str(newest_directory) + "/pred_positions.npy"))
     #true_positions_array = np.array(np.load(str(newest_directory) + "/true_positions.npy"))
 
     # grab relevent parameters from hy file and only keep the values corresponding to those in the test set
-    hy = h5py.File(settings.inputPath, "r")
+    hy = h5py.File(settings.inputPath + "/combine_combine.hy", "r")
     print(hy["labels"].shape)
     print(np.amax(idx))
     angles = np.array(hy['angles'])[idx].squeeze() 
@@ -113,8 +115,8 @@ def analyze_classification(settings):
         #Get the ids that are in both ML and fitqun samples
         intersect, comm1, comm2 = np.intersect1d(fitqun_hash, ml_hash, assume_unique=True, return_indices=True)
         print(f'intersect: {intersect.shape}, comm1: {comm1.shape}, comm2: {comm2.shape}')
-        print(len(comm1))
-        print(len(comm2))
+        print("len comm1:", len(comm1))
+        print('len comm2:', len(comm2))
 
         fitqun_matched_energies = energies[comm2]
         fitqun_dwall = dwall[comm2]
@@ -134,7 +136,13 @@ def analyze_classification(settings):
         print(f"fitqun e- avg towall > 100): {1-np.sum(temp[fitqun_labels[fitqun_towall > 100]==1])/len(temp[fitqun_labels[fitqun_towall > 100]==1])}")
         print(f"fitqun mu- avg (towall > 100): {1-np.sum(temp[fitqun_labels[fitqun_towall > 100]==0])/len(temp[fitqun_labels[fitqun_towall > 100]==0])}")
 
-
+        print("fitqun towall matrix", fitqun_towall > 100)
+        print("fitqun towall shape", fitqun_towall.shape)
+        print("fitqun label vector", fitqun_labels)
+        print("fitqun label vector shape", fitqun_labels.shape)
+        print("fitqun_labels",fitqun_labels[fitqun_towall > 100]==1)
+        print("fitqun_labels shape",(fitqun_labels[fitqun_towall > 100]==1).shape)
+        print("fitqun_labels len",temp[fitqun_labels[fitqun_towall > 100]==1])
         
     # apply cuts, as of right now it should remove any events with zero pmt hits (no veto cut)
     nhit_cut = nhits > 0 #25
@@ -198,19 +206,20 @@ def analyze_classification(settings):
         #fitqun_pi_eff = np.sum(cut_pi_discr[fitqun_labels[fitqun_basic_cuts] == 1])/len(cut_pi_discr[fitqun_labels[fitqun_basic_cuts]==1])
         #fitqun_bkg_rej = np.abs(np.sum(cut_pi_discr[fitqun_labels[fitqun_basic_cuts] == 0]-1))/len(cut_pi_discr[fitqun_labels[fitqun_basic_cuts]==0])
         #For mu/pi+
-        # fitqun_pi_eff = -1
-        # fitqun_bkg_rej = -1
-        print(do_fitqun)
-        # if do_fitqun:
-        cut_pi_discr = fitqun_pi_discr[fitqun_basic_cuts]
-        fitqun_pi_eff = np.sum(cut_pi_discr[fitqun_labels[fitqun_basic_cuts] ==0])/len(cut_pi_discr[fitqun_labels[fitqun_basic_cuts]==0])
-        fitqun_bkg_rej = np.abs(np.sum(cut_pi_discr[fitqun_labels[fitqun_basic_cuts] == 2]-1))/len(cut_pi_discr[fitqun_labels[fitqun_basic_cuts]==2])
+        # fitqun_pi_eff = .5
+        # fitqun_bkg_rej = .5
+        # print(do_fitqun)
+        if do_fitqun:
+            cut_pi_discr = fitqun_pi_discr[fitqun_basic_cuts]
+            fitqun_pi_eff = np.sum(cut_pi_discr[fitqun_labels[fitqun_basic_cuts] ==0])/len(cut_pi_discr[fitqun_labels[fitqun_basic_cuts]==0])
+            fitqun_bkg_rej = np.abs(np.sum(cut_pi_discr[fitqun_labels[fitqun_basic_cuts] == 2]-1))/len(cut_pi_discr[fitqun_labels[fitqun_basic_cuts]==2])
         print(f"fiTQun signal efficiency: {fitqun_pi_eff}, fiTQun bkg rejection: {fitqun_bkg_rej}")
         fig_roc, ax_roc = plot_rocs(run_result, e_label, mu_label, selection=basic_cuts, x_label="Electron Tagging Efficiency", y_label="Muon Rejection",
                 legend='best', mode='rejection', fitqun=(fitqun_pi_eff, fitqun_bkg_rej), label='ML')
         fig_roc.savefig(settings.outputPlotPath + '/ml_pi_roc.png', format='png')
 
     # calculate the thresholds that reject 99.9% of muons and apply cut to all events
+    # what's this number?
     muon_rejection = 0.961
     muon_efficiency = 1 - muon_rejection
     print(e_label)
