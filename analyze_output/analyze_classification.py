@@ -219,7 +219,6 @@ def analyze_classification(settings):
         fig_roc.savefig(settings.outputPlotPath + '/ml_pi_roc.png', format='png')
 
     # calculate the thresholds that reject 99.9% of muons and apply cut to all events
-    # what's this number?
     muon_rejection = 0.961
     muon_efficiency = 1 - muon_rejection
     print(e_label)

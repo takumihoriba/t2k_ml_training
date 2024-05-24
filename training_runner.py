@@ -11,6 +11,7 @@ from datetime import datetime
 import itertools
 
 import subprocess
+import re
 
 
 #from analysis.classification import WatChMaLClassification
@@ -24,8 +25,10 @@ from analyze_output.analyze_classification import analyze_classification
 from runner_util import utils, analysisUtils, train_config, make_split_file
 from WatChMaL.analysis.utils.binning import get_binning
 
-
+# import torch
 # from torchmetrics import AUROC, ROC
+
+from sklearn.metrics import roc_auc_score, roc_curve
 
 #from lxml import etree
 
@@ -35,6 +38,7 @@ parser = argparse.ArgumentParser(fromfile_prefix_chars='@')
 parser.add_argument("--doTraining", help="run training", action="store_true")
 parser.add_argument("--doFiTQun", help="run fitqun results", action="store_true")
 parser.add_argument("--doEvaluation", help="run evaluation on already trained network", action="store_true")
+parser.add_argument("--doMultiEvaluations", help="run evaluation on already trained network", action="store_true")
 parser.add_argument("--doComparison", help="run comparison", action="store_true")
 parser.add_argument("--doQuickPlots", help="Make performance plots", action="store_true")
 parser.add_argument("--doAnalysis", help="run analysis of ml and/or fitqun", action="store_true")
@@ -181,7 +185,97 @@ def end_training(settings, variable_list=[], variables=[]):
     level2 = etree.SubElement(level1_files, 'inputPath', var=settings.inputPath)
     tree = etree.ElementTree(root)
     tree.write(settings.outputPath+'training_stats.xml', pretty_print=True, xml_declaration=True,   encoding="utf-8")
+
+
+def get_performance_stats(settings, variable_list=[], variables=[]):
+    # softmaxes = np.load(settings.outputPath+'/'+'softmax.npy')
+    # labels = np.load(settings.outputPath+'/'+'labels.npy')
+
+    softmaxes = np.load(args.evaluationOutputDir+'/'+'softmax.npy') # prediction
+    labels = np.load(args.evaluationOutputDir+'/'+'labels.npy') # true
+    print(f'Unique labels in test set: {np.unique(labels,return_counts=True)}')
+
+    # print('true', labels)
+    # print('true', labels.shape)
     
+    # print(softmaxes.shape)
+    # print(softmaxes)
+    # print(softmaxes[:, 1].shape)
+    # print(softmaxes[:, 1])
+
+    auc_ovr = roc_auc_score(labels, softmaxes, multi_class='ovr')
+    auc_ovo = roc_auc_score(labels, softmaxes, multi_class='ovo')
+    # print(f'AUC: {auc}')
+    return np.array([auc_ovr, auc_ovo])
+
+
+    # auroc = AUROC(task="binary")
+    # auc = auroc (torch.tensor(softmaxes[:,1]),torch.tensor(labels))
+    # print(f'AUC: {auc}')
+    # if len(np.unique(labels)) < 2:
+    #     roc = ROC(task="binary")
+    #     fpr, tpr, thresholds = roc(torch.tensor(softmaxes[:,1]), torch.tensor(labels))
+    #     for i, eff in enumerate(tpr):
+    #         #From SK data quality paper, table 13 https://t2k.org/docs/technotes/399/v2r1
+    #         if eff > 0.99876:
+    #             print(f'tpr: {eff}, bkg rej: {1/fpr[i]}')
+    #             bkg_rej = 1/fpr[i]
+    #             break
+    # else:
+    #     roc = ROC(task="multiclass", num_classes = len(np.unique(labels)))
+    #     fpr, tpr, thresholds = roc(torch.tensor(softmaxes), torch.tensor(labels))
+    # bkg_rej = 0
+
+
+# def run_evaluation():
+#     settings = utils()
+#     settings.outputPath = args.evaluationOutputDir
+#     settings.set_output_directory()
+#     default_call = ["python", "WatChMaL/main.py", "--config-name=t2k_resnet_eval_classifier"] 
+#     indicesFile = check_list_and_convert(settings.indicesFile)
+#     perm_output_path = settings.outputPath
+
+#     default_call = ["python", "WatChMaL/main.py", "--config-name=t2k_resnet_eval_classifier"] 
+
+
+#     settings.outputPath = args.evaluationInputDir
+#     default_call.append("hydra.run.dir=" +str(args.evaluationInputDir))
+#     default_call.append("dump_path=" +str(args.evaluationOutputDir))
+#     print(default_call)
+#     subprocess.call(default_call)
+
+
+def run_evaluation(count=1, dead_pmt_seed=5, dead_pmt_rate=.03):
+    print(f"run_evaluation(count={count}, dead_pmt_seed={dead_pmt_seed}, dead_pmt_rate={dead_pmt_rate})")
+
+
+    settings = utils()
+    settings.outputPath = args.evaluationOutputDir
+    settings.set_output_directory()
+    default_call = ["python", "WatChMaL/main.py", "--config-name=t2k_resnet_eval_classifier"] 
+    indicesFile = check_list_and_convert(settings.indicesFile)
+    perm_output_path = settings.outputPath
+
+    default_call = ["python", "WatChMaL/main.py", "--config-name=t2k_resnet_eval_classifier"] 
+    settings.outputPath = args.evaluationInputDir
+    
+
+    default_call.append("hydra.run.dir=" +str(args.evaluationInputDir))
+    default_call.append("dump_path=" +str(args.evaluationOutputDir))
+    # default_call.append("dump_path=" + dump_path)
+    print(default_call)
+    default_call += [f"data.dataset.dead_pmt_rate={dead_pmt_rate}", f"data.dataset.dead_pmt_seed={dead_pmt_seed}"]
+    # for now just pmt rate
+
+    # subprocess.call(default_call)
+    result = subprocess.run(default_call, capture_output=True, text=True)
+    # print(default_call)
+    print(f'{default_call} was called. No problem. ')
+    if result.stderr is not None:
+        print("Error: ", result.stderr)
+    print("Output: ", result.stdout)
+    return result
+
 
 
 
@@ -218,7 +312,40 @@ if args.doEvaluation:
     print(default_call)
     subprocess.call(default_call)
     #end_training(settings)
+
+if args.doMultiEvaluations:
+    # a = np.ones((3, 5))
+    # np.savetxt(args.evaluationOutputDir + 'avg_metrics_' + datetime.today().strftime("%Y%m%d%H%M%S") +'.csv', a, delimiter=',')
+    # settings = utils()
+    # print(get_performance_stats(settings))
+
+    probs = [0.03, 0.05]
+    itr = 2
+    avg_metrics = None
+    for prob in probs:
+        sums = np.zeros((1, 4)) # loss, accuracy, auc, auc
+        
+        for s in range(itr):
+            r1 = run_evaluation(s, s, prob)
+            r2 = get_performance_stats(settings)
+            # print(r1.stdout)
+            metrics = re.findall(r'Average evaluation .*: (\d*\.\d*)', r1.stdout)
+            metrics = np.array([float(m) for m in metrics])
+            metrics = np.hstack((metrics, r2))
+            sums += metrics
+        print(f"[average loss, average accuracy] for dead prob of {prob} and {itr} iterations")
+        print(sums/itr)
+        if avg_metrics is None:
+            avg_metrics = sums / itr
+        else:
+            avg_metrics = np.vstack((avg_metrics, sums/itr))
     
+    # np.savetxt('avg_metrics.csv', avg_metrics, delimiter=',')
+    np.savetxt(args.evaluationOutputDir + 'avg_metrics_' + datetime.today().strftime("%Y%m%d%H%M%S") +'.csv', avg_metrics, delimiter=',')
+    avg_metrics_percent = np.insert(avg_metrics, 0, np.array(probs), axis = 1)
+    np.savetxt(args.evaluationOutputDir + 'avg_metrics_with_percent' + datetime.today().strftime("%Y%m%d%H%M%S") +'.csv', avg_metrics_percent, delimiter=',')
+    
+
 if args.testParser:
     pass
 
