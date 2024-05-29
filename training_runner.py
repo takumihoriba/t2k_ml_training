@@ -28,7 +28,8 @@ from WatChMaL.analysis.utils.binning import get_binning
 # import torch
 # from torchmetrics import AUROC, ROC
 
-from sklearn.metrics import roc_auc_score, roc_curve
+from sklearn.metrics import roc_auc_score, roc_curve, auc
+import matplotlib.pyplot as plt
 
 #from lxml import etree
 
@@ -39,6 +40,7 @@ parser.add_argument("--doTraining", help="run training", action="store_true")
 parser.add_argument("--doFiTQun", help="run fitqun results", action="store_true")
 parser.add_argument("--doEvaluation", help="run evaluation on already trained network", action="store_true")
 parser.add_argument("--doMultiEvaluations", help="run evaluation on already trained network", action="store_true")
+parser.add_argument("--debug", help="arg to run something", action="store_true")
 parser.add_argument("--doComparison", help="run comparison", action="store_true")
 parser.add_argument("--doQuickPlots", help="Make performance plots", action="store_true")
 parser.add_argument("--doAnalysis", help="run analysis of ml and/or fitqun", action="store_true")
@@ -193,57 +195,55 @@ def get_performance_stats(settings, variable_list=[], variables=[]):
 
     softmaxes = np.load(args.evaluationOutputDir+'/'+'softmax.npy') # prediction
     labels = np.load(args.evaluationOutputDir+'/'+'labels.npy') # true
-    print(f'Unique labels in test set: {np.unique(labels,return_counts=True)}')
+    
+    '''
+        0: e
+        1: mu
+        2: piplus
+    '''
+
+    # 1: muon-pip. Assume muon is 'signal(+)' and pip is 'background(-)'
+    mu_p_mask = np.isin(labels, [1, 2])
+    softmax_mu_p = softmaxes[mu_p_mask][:, [2,1]] # n by 2 matrix. 0th col = muon (+), 1st col = piplus (-)
+    labels_mu_p  = labels[mu_p_mask]
+
+    pred_prob_mu = softmax_mu_p[:, 0] / np.sum(softmax_mu_p, axis=1)
+
+    fpr, tpr, _ = roc_curve(labels_mu_p, pred_prob_mu, pos_label=2)
+    roc_auc_mu_p = auc(fpr, tpr)
+
+
+    # 2: e-mu. Assume e = (+), and mu = (-)
+
+    e_mu_mask = np.isin(labels, [0, 1])
+    softmax_e_mu = softmaxes[e_mu_mask][:, [0,1]] # n by 2 matrix. 0th col = e (+), 1st col = mu (-)
+    labels_e_mu  = labels[e_mu_mask]
+
+    pred_prob_e = softmax_e_mu[:, 0] / np.sum(softmax_e_mu, axis=1)
+
+    fpr, tpr, _ = roc_curve(labels_e_mu, pred_prob_e, pos_label=0)
+    roc_auc_e_mu = auc(fpr, tpr)
+    
+    return np.array([roc_auc_mu_p, roc_auc_e_mu])
+    
+    
+    
+    # print(f'Unique labels in test set: {np.unique(labels,return_counts=True)}')
+    # print('unique labels:', np.unique(labels))
+
+    # print('prediction', softmaxes)
+    # print('prediction', softmaxes.shape)
 
     # print('true', labels)
     # print('true', labels.shape)
-    
-    # print(softmaxes.shape)
-    # print(softmaxes)
-    # print(softmaxes[:, 1].shape)
-    # print(softmaxes[:, 1])
 
-    auc_ovr = roc_auc_score(labels, softmaxes, multi_class='ovr')
-    auc_ovo = roc_auc_score(labels, softmaxes, multi_class='ovo')
+    # print('2nd col of prediction:', softmaxes[:, 1].shape)
+    # print('2nd col of prediction:', softmaxes[:, 1])
+
+    # auc_ovr = roc_auc_score(labels, softmaxes, multi_class='ovr')
+    # auc_ovo = roc_auc_score(labels, softmaxes, multi_class='ovo')
     # print(f'AUC: {auc}')
-    return np.array([auc_ovr, auc_ovo])
-
-
-    # auroc = AUROC(task="binary")
-    # auc = auroc (torch.tensor(softmaxes[:,1]),torch.tensor(labels))
-    # print(f'AUC: {auc}')
-    # if len(np.unique(labels)) < 2:
-    #     roc = ROC(task="binary")
-    #     fpr, tpr, thresholds = roc(torch.tensor(softmaxes[:,1]), torch.tensor(labels))
-    #     for i, eff in enumerate(tpr):
-    #         #From SK data quality paper, table 13 https://t2k.org/docs/technotes/399/v2r1
-    #         if eff > 0.99876:
-    #             print(f'tpr: {eff}, bkg rej: {1/fpr[i]}')
-    #             bkg_rej = 1/fpr[i]
-    #             break
-    # else:
-    #     roc = ROC(task="multiclass", num_classes = len(np.unique(labels)))
-    #     fpr, tpr, thresholds = roc(torch.tensor(softmaxes), torch.tensor(labels))
-    # bkg_rej = 0
-
-
-# def run_evaluation():
-#     settings = utils()
-#     settings.outputPath = args.evaluationOutputDir
-#     settings.set_output_directory()
-#     default_call = ["python", "WatChMaL/main.py", "--config-name=t2k_resnet_eval_classifier"] 
-#     indicesFile = check_list_and_convert(settings.indicesFile)
-#     perm_output_path = settings.outputPath
-
-#     default_call = ["python", "WatChMaL/main.py", "--config-name=t2k_resnet_eval_classifier"] 
-
-
-#     settings.outputPath = args.evaluationInputDir
-#     default_call.append("hydra.run.dir=" +str(args.evaluationInputDir))
-#     default_call.append("dump_path=" +str(args.evaluationOutputDir))
-#     print(default_call)
-#     subprocess.call(default_call)
-
+    # return np.array([auc_ovr, auc_ovo])
 
 def run_evaluation(count=1, dead_pmt_seed=5, dead_pmt_rate=.03):
     print(f"run_evaluation(count={count}, dead_pmt_seed={dead_pmt_seed}, dead_pmt_rate={dead_pmt_rate})")
@@ -276,7 +276,27 @@ def run_evaluation(count=1, dead_pmt_seed=5, dead_pmt_rate=.03):
     print("Output: ", result.stdout)
     return result
 
+def copy_npy(i, s, p):
+    '''
+    
+    Parameters
+    ----------
+    i: iteration
+    s: seed
+    p: probability
+        In [0, 1]
+    '''
+    date_time_str = datetime.today().strftime("%Y%m%d%H%M%S")
+    dir_name = args.evaluationOutputDir + f'multiEval_seed_{s}_{i}th_itr_{round(p*100)}_percent_{date_time_str}/'
+    os.makedirs(dir_name, exist_ok=True)
+    source_dir = args.evaluationOutputDir
+    # cp_command = f'cp {source_dir}/labels.npy {dir_name}'
+    
+    cp_command = ["cp", f"{source_dir}/indices.npy",f"{source_dir}/labels.npy",f"{source_dir}/softmax.npy", dir_name]
 
+    result = subprocess.run(cp_command, capture_output=True, text=True)
+    print(result.stdout)
+    print(result.stderr)
 
 
 #if args.doComparison:
@@ -316,34 +336,141 @@ if args.doEvaluation:
 if args.doMultiEvaluations:
     # a = np.ones((3, 5))
     # np.savetxt(args.evaluationOutputDir + 'avg_metrics_' + datetime.today().strftime("%Y%m%d%H%M%S") +'.csv', a, delimiter=',')
-    # settings = utils()
+    settings = utils()
     # print(get_performance_stats(settings))
 
+    # debug
+    # print(get_performance_stats(settings))
+
+
+    ###################
+
+
+    # actual doMultiEval
     probs = [0.03, 0.05]
-    itr = 2
+    itr = 3
+    acc_loss = None
+    aucs = None
     avg_metrics = None
+    
     for prob in probs:
         sums = np.zeros((1, 4)) # loss, accuracy, auc, auc
-        
-        for s in range(itr):
-            r1 = run_evaluation(s, s, prob)
+        for i in range(itr):
+            s = i # seed
+            r1 = run_evaluation(i, s, prob)
             r2 = get_performance_stats(settings)
-            # print(r1.stdout)
-            metrics = re.findall(r'Average evaluation .*: (\d*\.\d*)', r1.stdout)
-            metrics = np.array([float(m) for m in metrics])
-            metrics = np.hstack((metrics, r2))
-            sums += metrics
-        print(f"[average loss, average accuracy] for dead prob of {prob} and {itr} iterations")
+            # r2 = np.array([.9 + .1*s*prob, .85 + .12*s*prob])
+            print(r1.stdout)
+            print(r1.stderr)
+            # accuracy and loss
+            acc_loss_curr = re.findall(r'Average evaluation .*: (\d*\.\d*)', r1.stdout)
+            # acc_loss_curr = np.array([0.5 +.1*s*prob, .7+.1*s*prob])
+            acc_loss_curr = np.array([float(m) for m in acc_loss_curr])
+
+            
+
+            # acc_loss_curr = np.vstack(np.array([prob, s, s]), acc_loss_curr)
+            
+            if acc_loss is None:
+                acc_loss = acc_loss_curr
+            else:
+                acc_loss = np.vstack((acc_loss, acc_loss_curr))
+
+            # aucs
+            # aucs_curr = np.vstack(np.array([prob, s, s]), r2)
+            aucs_curr = r2
+            if aucs is None:
+                aucs = aucs_curr
+            else:
+                aucs = np.vstack((aucs, aucs_curr))
+            
+            sums += np.hstack((acc_loss_curr, aucs_curr))
+
+            copy_npy(i, s, prob)
+              
+        print(f"[average loss, average accuracy, average AUC1, average AUC2] for dead prob of {prob} and {itr} iterations")
         print(sums/itr)
         if avg_metrics is None:
             avg_metrics = sums / itr
         else:
             avg_metrics = np.vstack((avg_metrics, sums/itr))
     
+    print("avg metrics:", avg_metrics)
     # np.savetxt('avg_metrics.csv', avg_metrics, delimiter=',')
-    np.savetxt(args.evaluationOutputDir + 'avg_metrics_' + datetime.today().strftime("%Y%m%d%H%M%S") +'.csv', avg_metrics, delimiter=',')
+    date_time_str = datetime.today().strftime("%Y%m%d%H%M%S")
+    np.savetxt(args.evaluationOutputDir + 'avg_metrics_' + date_time_str +'.csv', avg_metrics, delimiter=',')
     avg_metrics_percent = np.insert(avg_metrics, 0, np.array(probs), axis = 1)
-    np.savetxt(args.evaluationOutputDir + 'avg_metrics_with_percent' + datetime.today().strftime("%Y%m%d%H%M%S") +'.csv', avg_metrics_percent, delimiter=',')
+    np.savetxt(args.evaluationOutputDir + 'avg_metrics_with_percent' + date_time_str +'.csv', avg_metrics_percent, delimiter=',')
+    
+    np.savetxt(args.evaluationOutputDir + 'acc_loss_log_' + date_time_str +'.csv', acc_loss, delimiter=',')
+    np.savetxt(args.evaluationOutputDir + 'auc_log_' + date_time_str +'.csv', aucs, delimiter=',')
+
+if args.debug:
+    # settings = utils()
+    # a = get_performance_stats(settings)
+    print("a")
+    # call = 'mkdir ' + args.evaluationOutputDir + '/hello'
+    # s = 1
+    # i = 2
+    # p = .035
+    # dir_name = args.evaluationOutputDir + f'multiEval_seed_{s}_{i}th_itr_{round(p*100)}_percent/'
+    # os.makedirs(dir_name, exist_ok=True)
+    # source_dir = args.evaluationOutputDir
+    # # cp_command = f'cp {source_dir}/labels.npy {dir_name}'
+    # cp_command = ["cp", f"{source_dir}/indices.npy",f"{source_dir}/labels.npy",f"{source_dir}/softmax.npy", dir_name]
+
+    # result = subprocess.run(cp_command, capture_output=True, text=True)
+    # print(result.stdout)
+    # print(result.stderr)
+    # copy_npy(1, 2, .5)
+
+    path_each = args.evaluationOutputDir + '/multiEval_seed_0_0th_itr_3_percent_20240529134944'
+
+    softmaxes = np.load(path_each+'/'+'softmax.npy') # prediction
+    labels = np.load(path_each+'/'+'labels.npy') # true
+    
+    '''
+        0: e
+        1: mu
+        2: piplus
+    '''
+
+    # 1: muon-pip. Assume muon is 'signal(+)' and pip is 'background(-)'
+    mu_p_mask = np.isin(labels, [1, 2])
+    softmax_mu_p = softmaxes[mu_p_mask][:, [2,1]] # n by 2 matrix. 0th col = muon (+), 1st col = piplus (-)
+    labels_mu_p  = labels[mu_p_mask]
+
+    pred_prob_mu = softmax_mu_p[:, 0] / np.sum(softmax_mu_p, axis=1)
+
+    fpr, tpr, _ = roc_curve(labels_mu_p, pred_prob_mu, pos_label=2)
+    roc_auc_mu_p = auc(fpr, tpr)
+
+
+    # 2: e-mu. Assume e = (+), and mu = (-)
+
+    e_mu_mask = np.isin(labels, [0, 1])
+    softmax_e_mu = softmaxes[e_mu_mask][:, [0,1]] # n by 2 matrix. 0th col = e (+), 1st col = mu (-)
+    labels_e_mu  = labels[e_mu_mask]
+
+    pred_prob_e = softmax_e_mu[:, 0] / np.sum(softmax_e_mu, axis=1)
+
+    fpr2, tpr2, _ = roc_curve(labels_e_mu, pred_prob_e, pos_label=0)
+    roc_auc_e_mu = auc(fpr2, tpr2)
+
+    fig, ax = plt.subplots(figsize=(8, 6))
+    plt.plot(tpr, 1/fpr, color='blue', lw=2, label='ROC curve (area = %0.2f)' % roc_auc_mu_p)
+    ax.set_yscale('log')
+    # plt.plot([0, 1], [0, 1], color='gray', lw=1, linestyle='--')
+    # plt.xlim([0.0, 1.0])
+    # plt.ylim([0.0, 1.05])
+    plt.xlabel('Efficiency')
+    plt.ylabel('Rejection')
+    plt.title('Receiver Operating Characteristic (ROC)')
+    plt.legend(loc="lower right")
+    plt.show()
+    plt.savefig('roc_curve.png')
+
+    print("end")
     
 
 if args.testParser:
