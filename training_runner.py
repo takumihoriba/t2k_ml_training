@@ -424,51 +424,128 @@ if args.debug:
     # print(result.stderr)
     # copy_npy(1, 2, .5)
 
-    path_each = args.evaluationOutputDir + '/multiEval_seed_0_0th_itr_3_percent_20240529134944'
-
-    softmaxes = np.load(path_each+'/'+'softmax.npy') # prediction
-    labels = np.load(path_each+'/'+'labels.npy') # true
+    sub_dir_name = ['/multiEval_seed_0_0th_itr_3_percent_20240529134944',
+                    '/multiEval_seed_0_0th_itr_5_percent_20240529142605']
     
-    '''
-        0: e
-        1: mu
-        2: piplus
-    '''
+    sub_dir_name = [
+        'multiEval_seed_0_0th_itr_3_percent_20240529134944',
+        'multiEval_seed_0_0th_itr_5_percent_20240529142605',
+        'multiEval_seed_1_1th_itr_3_percent_20240529140157',
+        'multiEval_seed_1_1th_itr_5_percent_20240529143807',
+        'multiEval_seed_2_2th_itr_3_percent_20240529141406',
+        'multiEval_seed_2_2th_itr_5_percent_20240529145014'
+    ]
+    percents = [3, 5, 3, 5, 3, 5]
+    color = ['red','blue','pink', 'skyblue','orange', 'navy']
 
-    # 1: muon-pip. Assume muon is 'signal(+)' and pip is 'background(-)'
-    mu_p_mask = np.isin(labels, [1, 2])
-    softmax_mu_p = softmaxes[mu_p_mask][:, [2,1]] # n by 2 matrix. 0th col = muon (+), 1st col = piplus (-)
-    labels_mu_p  = labels[mu_p_mask]
-
-    pred_prob_mu = softmax_mu_p[:, 0] / np.sum(softmax_mu_p, axis=1)
-
-    fpr, tpr, _ = roc_curve(labels_mu_p, pred_prob_mu, pos_label=2)
-    roc_auc_mu_p = auc(fpr, tpr)
-
-
-    # 2: e-mu. Assume e = (+), and mu = (-)
-
-    e_mu_mask = np.isin(labels, [0, 1])
-    softmax_e_mu = softmaxes[e_mu_mask][:, [0,1]] # n by 2 matrix. 0th col = e (+), 1st col = mu (-)
-    labels_e_mu  = labels[e_mu_mask]
-
-    pred_prob_e = softmax_e_mu[:, 0] / np.sum(softmax_e_mu, axis=1)
-
-    fpr2, tpr2, _ = roc_curve(labels_e_mu, pred_prob_e, pos_label=0)
-    roc_auc_e_mu = auc(fpr2, tpr2)
 
     fig, ax = plt.subplots(figsize=(8, 6))
-    plt.plot(tpr, 1/fpr, color='blue', lw=2, label='ROC curve (area = %0.2f)' % roc_auc_mu_p)
+    for i, sd in enumerate(sub_dir_name):
+        path_each = args.evaluationOutputDir + sd
+        softmaxes = np.load(path_each+'/'+'softmax.npy') # prediction
+        labels = np.load(path_each+'/'+'labels.npy') # true
+
+        mu_p_mask = np.isin(labels, [1, 2])
+        softmax_mu_p = softmaxes[mu_p_mask][:, [2,1]] # n by 2 matrix. 0th col = muon (+), 1st col = piplus (-)
+        labels_mu_p  = labels[mu_p_mask]
+
+        pred_prob_mu = softmax_mu_p[:, 0] / np.sum(softmax_mu_p, axis=1)
+
+        fpr, tpr, _ = roc_curve(labels_mu_p, pred_prob_mu, pos_label=2)
+        roc_auc_mu_p = auc(fpr, tpr)
+    
+        plt.plot(tpr, 1/fpr, color=color[i], lw=.5, label=f'ROC curve for {percents[i]}% (area = {round(roc_auc_mu_p, 3)})' )
+    # plt.plot(tpr2, 1/fpr2, color='red', lw=2, label='ROC curve (area = %0.2f)' % roc_auc_e_mu)
     ax.set_yscale('log')
     # plt.plot([0, 1], [0, 1], color='gray', lw=1, linestyle='--')
     # plt.xlim([0.0, 1.0])
     # plt.ylim([0.0, 1.05])
-    plt.xlabel('Efficiency')
-    plt.ylabel('Rejection')
+    plt.xlabel('Muon Efficiency')
+    plt.ylabel('Pi+ Rejection')
     plt.title('Receiver Operating Characteristic (ROC)')
-    plt.legend(loc="lower right")
+    plt.legend(loc="upper right")
     plt.show()
-    plt.savefig('roc_curve.png')
+    plt.savefig('roc_curve_mu_p.png')
+    plt.close()
+
+    fig, ax = plt.subplots(figsize=(8, 6))
+    for i, sd in enumerate(sub_dir_name):
+        path_each = args.evaluationOutputDir + sd
+        softmaxes = np.load(path_each+'/'+'softmax.npy') # prediction
+        labels = np.load(path_each+'/'+'labels.npy') # true
+        e_mu_mask = np.isin(labels, [0, 1])
+        softmax_e_mu = softmaxes[e_mu_mask][:, [0,1]] # n by 2 matrix. 0th col = e (+), 1st col = mu (-)
+        labels_e_mu  = labels[e_mu_mask]
+
+        pred_prob_e = softmax_e_mu[:, 0] / np.sum(softmax_e_mu, axis=1)
+
+        fpr, tpr, _ = roc_curve(labels_e_mu, pred_prob_e, pos_label=0)
+        roc_auc_e_mu = auc(fpr, tpr)
+    
+        plt.plot(tpr, 1/fpr, color=color[i], lw=.5, label=f'ROC curve for {percents[i]}% (area = {round(roc_auc_e_mu, 3)})' )
+    # plt.plot(tpr2, 1/fpr2, color='red', lw=2, label='ROC curve (area = %0.2f)' % roc_auc_e_mu)
+    ax.set_yscale('log')
+    # plt.plot([0, 1], [0, 1], color='gray', lw=1, linestyle='--')
+    # plt.xlim([0.0, 1.0])
+    # plt.ylim([0.0, 1.05])
+    plt.xlabel('Electron Efficiency')
+    plt.ylabel('Muon Rejection')
+    plt.title('Receiver Operating Characteristic (ROC)')
+    plt.legend(loc="upper right")
+    plt.show()
+    plt.savefig('roc_curve_e_mu.png')
+    plt.close()
+
+    
+    
+    
+    
+    # path_each = args.evaluationOutputDir + '/multiEval_seed_0_0th_itr_3_percent_20240529134944'
+
+    # softmaxes = np.load(path_each+'/'+'softmax.npy') # prediction
+    # labels = np.load(path_each+'/'+'labels.npy') # true
+    
+    # '''
+    #     0: e
+    #     1: mu
+    #     2: piplus
+    # '''
+
+    # # 1: muon-pip. Assume muon is 'signal(+)' and pip is 'background(-)'
+    # mu_p_mask = np.isin(labels, [1, 2])
+    # softmax_mu_p = softmaxes[mu_p_mask][:, [2,1]] # n by 2 matrix. 0th col = muon (+), 1st col = piplus (-)
+    # labels_mu_p  = labels[mu_p_mask]
+
+    # pred_prob_mu = softmax_mu_p[:, 0] / np.sum(softmax_mu_p, axis=1)
+
+    # fpr, tpr, _ = roc_curve(labels_mu_p, pred_prob_mu, pos_label=2)
+    # roc_auc_mu_p = auc(fpr, tpr)
+
+
+    # # 2: e-mu. Assume e = (+), and mu = (-)
+
+    # e_mu_mask = np.isin(labels, [0, 1])
+    # softmax_e_mu = softmaxes[e_mu_mask][:, [0,1]] # n by 2 matrix. 0th col = e (+), 1st col = mu (-)
+    # labels_e_mu  = labels[e_mu_mask]
+
+    # pred_prob_e = softmax_e_mu[:, 0] / np.sum(softmax_e_mu, axis=1)
+
+    # fpr2, tpr2, _ = roc_curve(labels_e_mu, pred_prob_e, pos_label=0)
+    # roc_auc_e_mu = auc(fpr2, tpr2)
+
+    # fig, ax = plt.subplots(figsize=(8, 6))
+    # plt.plot(tpr, 1/fpr, color='blue', lw=2, label='ROC curve (area = %0.2f)' % roc_auc_mu_p)
+    # # plt.plot(tpr2, 1/fpr2, color='red', lw=2, label='ROC curve (area = %0.2f)' % roc_auc_e_mu)
+    # ax.set_yscale('log')
+    # # plt.plot([0, 1], [0, 1], color='gray', lw=1, linestyle='--')
+    # # plt.xlim([0.0, 1.0])
+    # # plt.ylim([0.0, 1.05])
+    # plt.xlabel('Efficiency')
+    # plt.ylabel('Rejection')
+    # plt.title('Receiver Operating Characteristic (ROC)')
+    # plt.legend(loc="upper right")
+    # plt.show()
+    # plt.savefig('roc_curve.png')
 
     print("end")
     
