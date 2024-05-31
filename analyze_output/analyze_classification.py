@@ -7,8 +7,11 @@ import os
 
 import h5py
 
+# from analysis.classification import plot_rocs2
+
 from analysis.classification import WatChMaLClassification
 from analysis.classification import plot_efficiency_profile, plot_rocs
+
 from analysis.utils.plotting import plot_legend
 from analysis.utils.binning import get_binning
 from analysis.utils.fitqun import read_fitqun_file, make_fitqunlike_discr, get_rootfile_eventid_hash, plot_fitqun_comparison
@@ -438,6 +441,7 @@ def plot_superimposed_ROC(settings, sub_dir_names=None, percents=None):
     ##########
     fig_roc = None
     ax_roc = None
+    aucs = None
     for i, sub_dir in enumerate(sub_dirs):
         settings.mlPath = base_path + sub_dir
 
@@ -525,11 +529,17 @@ def plot_superimposed_ROC(settings, sub_dir_names=None, percents=None):
         # for single runs and then can plot the ROC curves with it 
         #run = [WatChMaLClassification(newest_directory, 'title', labels, idx, basic_cuts, color="blue", linestyle='-')]
 
-        fig_roc, ax_roc = plot_rocs(run_result, signal_label, background_labels, ax = ax_roc, selection=basic_cuts, x_label=f"{signal_label_desc} Tagging Efficiency", y_label=f"{background_labels_desc} Rejection",
-                legend='best', mode='rejection', fitqun=None, label='ML')
-    
-    
+        fig_roc, ax_roc, auc= plot_rocs(run_result, signal_label, background_labels, ax = ax_roc, selection=basic_cuts, x_label=f"{signal_label_desc} Tagging Efficiency", y_label=f"{background_labels_desc} Rejection",
+                legend='best', mode='rejection', fitqun=None, label='ML', fig_size =(9, 8), return_auc=True)
+        
+        print('auc: ', auc)
+        # if aucs is None:
+        #     aucs = np.array([auc])
+        # else:
+        #     aucs = np.vstack(aucs, np.array[auc])
+     
     fig_roc.savefig(settings.outputPlotPath + f'/{signal_label_desc}_vs_{background_labels_desc}_ROCs.png', format='png')
+    # np.savetxt(settings.outputPlotPath + f'/{signal_label_desc}_vs_{background_labels_desc}_ROCs.csv', aucs)
 
     # remove comment for ROC curves of single run 
     return run_result[0]

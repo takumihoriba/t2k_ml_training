@@ -32,7 +32,7 @@ def combine_softmax(softmaxes, labels):
 
 
 def plot_rocs(runs, signal_labels, background_labels, selection=None, ax=None, fig_size=None, x_label="", y_label="",
-              x_lim=None, y_lim=None, y_log=None, x_log=None, legend='best', mode='rejection', fitqun=None, **plot_args):
+              x_lim=None, y_lim=None, y_log=None, x_log=None, legend='best', mode='rejection', fitqun=None, return_auc=False, **plot_args):
     """
     Plot overlaid ROC curves of results from a number of classification runs
 
@@ -79,6 +79,7 @@ def plot_rocs(runs, signal_labels, background_labels, selection=None, ax=None, f
     fig: matplotlib.figure.Figure
     ax: matplotlib.axes.Axes
     """
+    auc = 0
     if ax is None:
         fig, ax = plt.subplots(figsize=fig_size)
     else:
@@ -114,8 +115,11 @@ def plot_rocs(runs, signal_labels, background_labels, selection=None, ax=None, f
         ax.set_xlim(x_lim)
     if legend:
         ax.legend(loc=legend)
-    return fig, ax
-
+    
+    if return_auc:
+        return fig, ax, auc
+    else:
+        return fig, ax
 
 def plot_efficiency_profile(runs, binning, selection=None, select_labels=None, ax=None, fig_size=None, x_label="",
                             y_label="", legend='best', y_lim=None, label=None, **plot_args):

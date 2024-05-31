@@ -20,7 +20,7 @@ import re
 import WatChMaL.analysis.utils.math as math
 
 from analyze_output.analyze_regression import analyze_regression
-from analyze_output.analyze_classification import analyze_classification, analyze_classification2, plot_superimposed_ROC
+from analyze_output.analyze_classification import analyze_classification, plot_superimposed_ROC
 
 from runner_util import utils, analysisUtils, train_config, make_split_file
 from WatChMaL.analysis.utils.binning import get_binning
