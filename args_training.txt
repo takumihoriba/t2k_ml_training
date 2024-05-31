@@ -1,4 +1,4 @@
---debug
+--doMultiAnalyses
 --numFolds=10
 --indicesInput=/data/fcormier/t2k/Public/oct20_eMuPosPion_0dwallCut_flat_1/combine_combine.hy
 --indicesOutputPath=/data/thoriba/t2k/indices/apr3_eMuPiPlus_1500MeV_small_1/

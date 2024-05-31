@@ -283,3 +283,253 @@ def analyze_classification(settings):
 
     # remove comment for ROC curves of single run 
     return run_result[0]
+
+def analyze_classification2(settings):
+    # retrieve test indices.
+    # must use correct indices for dataset.
+
+    # settings.mlPath = '/data/thoriba/t2k/eval/oct20_eMuPosPion_0dwallCut_flat_1/09052024-171021/multiEval_seed_1_1th_itr_0_percent_20240530102634'
+    # settings.mlPath = '/data/thoriba/t2k/eval/oct20_eMuPosPion_0dwallCut_flat_1/09052024-171021/multiEval_seed_0_0th_itr_0_percent_20240530142420'
+    settings.mlPath = '/data/thoriba/t2k/eval/oct20_eMuPosPion_0dwallCut_flat_1/09052024-171021/multiEval_seed_0_0th_itr_3_percent_20240529134944'
+    
+
+    idx = np.array(sorted(np.load(str(settings.mlPath) + "/indices.npy")))
+    idx = np.unique(idx)
+    softmax = np.array(np.load(str(settings.mlPath) + "/softmax.npy"))
+    
+    labels_test = np.array(np.load(str(settings.mlPath) + "/labels.npy"))
+    #positions_array = np.array(np.load(str(newest_directory) + "/pred_positions.npy"))
+    #true_positions_array = np.array(np.load(str(newest_directory) + "/true_positions.npy"))
+
+    # grab relevent parameters from hy file and only keep the values corresponding to those in the test set
+    hy = h5py.File(settings.inputPath + "/combine_combine.hy", "r")
+    print(hy["labels"].shape)
+    print(np.amax(idx))
+    angles = np.array(hy['angles'])[idx].squeeze() 
+    labels = np.array(hy['labels'])[idx].squeeze() 
+    veto = np.array(hy['veto'])[idx].squeeze()
+    energies = np.array(hy['energies'])[idx].squeeze()
+    positions = np.array(hy['positions'])[idx].squeeze()
+    #positions=true_positions_array.squeeze()
+    directions = math.direction_from_angles(angles)
+    rootfiles = np.array(hy['root_files'])[idx].squeeze()
+    event_ids = np.array(hy['event_ids'])[idx].squeeze()
+    #positions_ml = positions_array.squeeze()
+
+    # calculate number of hits 
+    events_hits_index = np.append(hy['event_hits_index'], hy['hit_pmt'].shape[0])
+    nhits = (events_hits_index[idx+1] - events_hits_index[idx]).squeeze()
+
+
+    #softmax_sig = [softmax[label] for label in settings.signalLabels]
+    #softmax_bkg = [softmax[label] for label in settings.bkgLabels]
+
+    softmax_e = softmax[labels==1]
+    softmax_mu = softmax[labels==0]
+    softmax_pi = softmax[labels==2]
+
+    #Save ids and rootfiles to compare to fitqun, after applying cuts
+    ml_hash = get_rootfile_eventid_hash(rootfiles, event_ids, fitqun=False)
+
+
+    softmax_sum = np.sum(softmax,axis=1)
+    print(f"SOFTMAX SUM: {np.amin(softmax_sum)}")
+
+    # calculate additional parameters 
+    towall = math.towall(positions, angles, tank_axis = 2)
+    dwall = math.dwall(positions, tank_axis = 2)
+    # momentum = math.momentum_from_energy(energies, labels)
+    ml_cheThr = list(map(get_cherenkov_threshold, labels))
+    ml_visible_energy = energies - ml_cheThr
+
+        
+    # apply cuts, as of right now it should remove any events with zero pmt hits (no veto cut)
+    nhit_cut = nhits > 0 #25
+    towall_cut = towall > 100
+    # veto_cut = (veto == 0)
+    hy_electrons = (labels == 0)
+    hy_muons = (labels == 2)
+    print(f"hy_electrons: {hy_electrons.shape}, hy_muons: {hy_muons.shape}, nhit_cut: {nhit_cut.shape}, towall_cut: {towall_cut.shape}")
+    basic_cuts = ((hy_electrons | hy_muons) & nhit_cut & towall_cut)
+
+    # set class labels and decrease values within labels to match either 0 or 1 
+    if type(settings.signalLabels) == list:
+        e_label = [settings.signalLabels]
+    else:
+        e_label = [settings.signalLabels]
+    if type(settings.bkgLabels) == list:
+        mu_label = settings.bkgLabels
+    else:
+        mu_label = settings.bkgLabels
+    #labels = [x - 1 for x in labels]
+
+    # get the bin indices and edges for parameters
+    # polar_binning = get_binning(np.cos(angles[:,0]), 10, -1, 1)
+    # az_binning = get_binning(angles[:,1]*180/np.pi, 10, -180, 180)
+    # mom_binning = get_binning(momentum, 9, minimum=100, maximum=1000)
+    # visible_energy_binning = get_binning(ml_visible_energy, 10, minimum=0, maximum=1000)
+    # dwall_binning = get_binning(dwall, 15, minimum=0, maximum=1600)
+    # towall_binning = get_binning(towall, 30, minimum=0, maximum=3000)
+
+    # create watchmal classification object to be used as runs for plotting the efficiency relative to event angle  
+    stride1 = settings.mlPath
+    run_result = [WatChMaLClassification(stride1, 'test', labels, idx, basic_cuts, color="blue", linestyle='-')]
+    # print(f"UNIQUE IN LABLES: {np.unique(fitqun_labels, return_counts=True)}")
+
+    
+    # for single runs and then can plot the ROC curves with it 
+    #run = [WatChMaLClassification(newest_directory, 'title', labels, idx, basic_cuts, color="blue", linestyle='-')]
+
+
+    if True:
+        #For electron/muon
+        #ALSO have to change e/mu definitions for fitqun and ML
+        #cut_pi_discr = fitqun_discr[fitqun_basic_cuts]
+        #fitqun_pi_eff = np.sum(cut_pi_discr[fitqun_labels[fitqun_basic_cuts] == 1])/len(cut_pi_discr[fitqun_labels[fitqun_basic_cuts]==1])
+        #fitqun_bkg_rej = np.abs(np.sum(cut_pi_discr[fitqun_labels[fitqun_basic_cuts] == 0]-1))/len(cut_pi_discr[fitqun_labels[fitqun_basic_cuts]==0])
+        #For mu/pi+
+        # fitqun_pi_eff = .5
+        # fitqun_bkg_rej = .5
+        # print(do_fitqun)
+        # if do_fitqun:
+        #     cut_pi_discr = fitqun_pi_discr[fitqun_basic_cuts]
+        #     fitqun_pi_eff = np.sum(cut_pi_discr[fitqun_labels[fitqun_basic_cuts] ==0])/len(cut_pi_discr[fitqun_labels[fitqun_basic_cuts]==0])
+        #     fitqun_bkg_rej = np.abs(np.sum(cut_pi_discr[fitqun_labels[fitqun_basic_cuts] == 2]-1))/len(cut_pi_discr[fitqun_labels[fitqun_basic_cuts]==2])
+        # print(f"fiTQun signal efficiency: {fitqun_pi_eff}, fiTQun bkg rejection: {fitqun_bkg_rej}")
+        fig_roc, ax_roc = plot_rocs(run_result, e_label, mu_label, selection=basic_cuts, x_label="Electron Tagging Efficiency", y_label="Muon Rejection",
+                legend='best', mode='rejection', fitqun=None, label='ML')
+        fig_roc, ax_roc = plot_rocs(run_result, e_label, mu_label, ax = ax_roc, selection=None, x_label="Electron Tagging Efficiency", y_label="Muon Rejection",
+                legend='best', mode='rejection', fitqun=None, label='ML')
+        fig_roc.savefig(settings.outputPlotPath + '/ml_pi_roc_hi.png', format='png')
+
+    # remove comment for ROC curves of single run 
+    return run_result[0]
+
+def plot_superimposed_ROC(settings, sub_dir_names=None, percents=None):
+    # retrieve test indices.
+    # must use correct indices for dataset.
+
+    # settings.mlPath = '/data/thoriba/t2k/eval/oct20_eMuPosPion_0dwallCut_flat_1/09052024-171021/multiEval_seed_1_1th_itr_0_percent_20240530102634'
+    # settings.mlPath = '/data/thoriba/t2k/eval/oct20_eMuPosPion_0dwallCut_flat_1/09052024-171021/multiEval_seed_0_0th_itr_0_percent_20240530142420'
+    # settings.mlPath = '/data/thoriba/t2k/eval/oct20_eMuPosPion_0dwallCut_flat_1/09052024-171021/multiEval_seed_0_0th_itr_3_percent_20240529134944'
+    
+    # TODO: Need to hard-code info below for now
+    # base_path + sub_dirs[i] is where result of i-th evaluation is stored.
+    base_path = '/data/thoriba/t2k/eval/oct20_eMuPosPion_0dwallCut_flat_1/09052024-171021/'
+    sub_dirs = sub_dir_names
+    if sub_dirs is None:
+        sub_dirs = [
+            'multiEval_seed_0_0th_itr_0_percent_20240530101357',
+
+            'multiEval_seed_0_0th_itr_3_percent_20240529134944',
+            'multiEval_seed_1_1th_itr_3_percent_20240529140157',
+            'multiEval_seed_2_2th_itr_3_percent_20240529141406',
+
+            'multiEval_seed_0_0th_itr_5_percent_20240529142605',
+            'multiEval_seed_1_1th_itr_5_percent_20240529143807',
+            'multiEval_seed_2_2th_itr_5_percent_20240529145014'
+        ]
+    # colors list. i-th color will be color of ROC curve from i-th evaluation
+    colors = ['black', 'red','pink','orange', 'blue', 'skyblue', 'purple', 'yellow', 'green', 'brown','yellow', 'green', 'brown']
+    # percents list. i-th value = dead pmt percent for i-th evaluation. Used for legends in plot.
+    if percents is None:
+        percents = [0, 3, 3, 3, 5, 5, 5, 100, 100, 100, 100, 100, 100, 100]
+    
+    ##########
+    fig_roc = None
+    ax_roc = None
+    for i, sub_dir in enumerate(sub_dirs):
+        settings.mlPath = base_path + sub_dir
+
+
+        idx = np.array(sorted(np.load(str(settings.mlPath) + "/indices.npy")))
+        idx = np.unique(idx)
+        softmax = np.array(np.load(str(settings.mlPath) + "/softmax.npy"))
+        
+        labels_test = np.array(np.load(str(settings.mlPath) + "/labels.npy"))
+        #positions_array = np.array(np.load(str(newest_directory) + "/pred_positions.npy"))
+        #true_positions_array = np.array(np.load(str(newest_directory) + "/true_positions.npy"))
+
+        # grab relevent parameters from hy file and only keep the values corresponding to those in the test set
+        hy = h5py.File(settings.inputPath + "/combine_combine.hy", "r")
+        print(hy["labels"].shape)
+        print(np.amax(idx))
+        angles = np.array(hy['angles'])[idx].squeeze() 
+        labels = np.array(hy['labels'])[idx].squeeze() 
+        veto = np.array(hy['veto'])[idx].squeeze()
+        energies = np.array(hy['energies'])[idx].squeeze()
+        positions = np.array(hy['positions'])[idx].squeeze()
+        #positions=true_positions_array.squeeze()
+        directions = math.direction_from_angles(angles)
+        rootfiles = np.array(hy['root_files'])[idx].squeeze()
+        event_ids = np.array(hy['event_ids'])[idx].squeeze()
+        #positions_ml = positions_array.squeeze()
+
+        # calculate number of hits 
+        events_hits_index = np.append(hy['event_hits_index'], hy['hit_pmt'].shape[0])
+        nhits = (events_hits_index[idx+1] - events_hits_index[idx]).squeeze()
+
+
+
+        #Save ids and rootfiles to compare to fitqun, after applying cuts
+        ml_hash = get_rootfile_eventid_hash(rootfiles, event_ids, fitqun=False)
+
+
+        softmax_sum = np.sum(softmax,axis=1)
+        print(f"SOFTMAX SUM: {np.amin(softmax_sum)}")
+
+        # calculate additional parameters 
+        towall = math.towall(positions, angles, tank_axis = 2)
+        ml_cheThr = list(map(get_cherenkov_threshold, labels))
+
+        
+        # apply cuts, as of right now it should remove any events with zero pmt hits (no veto cut)
+        nhit_cut = nhits > 0 #25
+        towall_cut = towall > 100
+        # veto_cut = (veto == 0)
+        hy_electrons = (labels == 0)
+        hy_muons = (labels == 2)
+        print(f"hy_electrons: {hy_electrons.shape}, hy_muons: {hy_muons.shape}, nhit_cut: {nhit_cut.shape}, towall_cut: {towall_cut.shape}")
+        # basic_cuts = ((hy_electrons | hy_muons) & nhit_cut & towall_cut)
+        basic_cuts = (nhit_cut & towall_cut)
+        
+
+        # set class labels and decrease values within labels to match either 0 or 1 
+        if type(settings.signalLabels) == list:
+            signal_label = [settings.signalLabels] # previously e_label
+        else:
+            signal_label = [settings.signalLabels]
+        if type(settings.bkgLabels) == list:
+            background_labels = settings.bkgLabels # previously mu_label
+        else:
+            background_labels = [settings.bkgLabels]
+        #labels = [x - 1 for x in labels]
+
+        print("signal from settings:", settings.signalLabels)
+        print("bckgrd from settings:", settings.bkgLabels)
+
+        print("e_label  ", signal_label)
+        print("mu_label ", background_labels)
+        
+        label_names = ['Muon', 'Electron', 'Pion'] # The labels are muons 0, electrons 1, and pions 2
+        signal_label_desc = label_names[signal_label[0]]
+        background_labels_desc = 'Others' if len(background_labels) > 1 else label_names[background_labels[0]]
+
+
+        # create watchmal classification object to be used as runs for plotting the efficiency relative to event angle  
+        stride1 = settings.mlPath
+        run_result = [WatChMaLClassification(stride1, f'test with {percents[i]}% dead PMTs', labels, idx, basic_cuts, color=colors[i], linestyle='-')]
+        # print(f"UNIQUE IN LABLES: {np.unique(fitqun_labels, return_counts=True)}")
+
+        
+        # for single runs and then can plot the ROC curves with it 
+        #run = [WatChMaLClassification(newest_directory, 'title', labels, idx, basic_cuts, color="blue", linestyle='-')]
+
+        fig_roc, ax_roc = plot_rocs(run_result, signal_label, background_labels, ax = ax_roc, selection=basic_cuts, x_label=f"{signal_label_desc} Tagging Efficiency", y_label=f"{background_labels_desc} Rejection",
+                legend='best', mode='rejection', fitqun=None, label='ML')
+    
+    
+    fig_roc.savefig(settings.outputPlotPath + f'/{signal_label_desc}_vs_{background_labels_desc}_ROCs.png', format='png')
+
+    # remove comment for ROC curves of single run 
+    return run_result[0]
