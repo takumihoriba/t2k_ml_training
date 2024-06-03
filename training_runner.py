@@ -20,7 +20,7 @@ import re
 import WatChMaL.analysis.utils.math as math
 
 from analyze_output.analyze_regression import analyze_regression
-from analyze_output.analyze_classification import analyze_classification, plot_superimposed_ROC
+from analyze_output.analyze_classification import analyze_classification, plot_superimposed_ROC, some_exp
 
 from runner_util import utils, analysisUtils, train_config, make_split_file
 from WatChMaL.analysis.utils.binning import get_binning
@@ -308,6 +308,8 @@ def copy_npy(i, s, p):
     print(result.stdout)
     print(result.stderr)
 
+    return dir_name
+
 # Don't use this. incorrect implementation.
 def create_multi_ROCs(settings):
     sub_dir_name = [
@@ -473,7 +475,10 @@ if args.doMultiEvaluations:
             
             sums += np.hstack((acc_loss_curr, aucs_curr))
 
-            copy_npy(i, s, prob)
+            dir_name = copy_npy(i, s, prob)
+            np.savetxt(dir_name + 'accuracy_loss'+'.csv', acc_loss_curr, delimiter=',')
+
+
               
         print(f"[average loss, average accuracy, average AUC1, average AUC2] for dead prob of {prob} and {itr} iterations")
         print(sums/itr)
@@ -519,20 +524,11 @@ def multiAnalyses_helper(evalOutputDir=None, sort_by_percent=True):
         return sd_names, seeds, itrs, percents
 
 if args.debug:
-    print("a")
-    # call = ['ls', args.evaluationOutputDir]
-    # res = subprocess.run(call ,capture_output=True, text=True)
-    # # print(sub_dir_names.stdout)
-    # sd_names = re.findall(r'(multiEval_seed.*)', res.stdout)
-    # print(sd_names)
-    # seeds = re.findall(r'multiEval_seed_(\d*)_.*', res.stdout)
-    # print(seeds)
-    # itrs = re.findall(r'multiEval_seed_.*_(\d*)th_itr_.*', res.stdout)
-    # print(itrs)
-    # percents = re.findall(r'multiEval_seed_.*itr_(\d*)_percent_.*', res.stdout)
-    # print(percents)
-    # print("end")
-    
+    print("debug")
+    # some_exp('thoriba')
+    settings = analysisUtils()
+    sorted_sd_names, _, _, sorted_percents = multiAnalyses_helper()
+    some_exp(settings, sub_dir_names=sorted_sd_names, percents=sorted_percents)
 
 if args.testParser:
     pass
@@ -549,28 +545,11 @@ if args.doAnalysis:
     
 if args.doMultiAnalyses:
     settings = analysisUtils()
-    # analyze_classification2(settings)
-
-    # call = ['ls', args.evaluationOutputDir]
-    # sub_dir_names = subprocess.run(call ,capture_output=True, text=True)
-    # print(sub_dir_names.stdout)
-    # sd_names = re.findall(r'^(multiEval_seed.*)', sub_dir_names.stdout, re.MULTILINE)
-    # print("sd_names", sd_names)
-    # seeds = re.findall(r'^multiEval_seed_(\d*)_.*', sub_dir_names.stdout, re.MULTILINE)
-    # print(seeds)
-    # itrs = re.findall(r'^multiEval_seed_.*_(\d*)th_itr_.*', sub_dir_names.stdout, re.MULTILINE)
-    # print(itrs)
-    # percents = re.findall(r'^multiEval_seed_.*itr_(\d*)_percent_.*', sub_dir_names.stdout, re.MULTILINE)
-    # print(percents)
-    
-    # comb = list(zip(sd_names, percents))
-    # sorted_comb = sorted(comb, key=lambda x:x[1]) # sorted based on percents
-    # sorted_sd_names = [x[0] for x in sorted_comb]
-    # sorted_percents = sorted(percents)
-    # # percents.sort()
-
-    sorted_sd_names, _, _, sorted_percents = multiAnalyses_helper()
-    plot_superimposed_ROC(settings, sub_dir_names=sorted_sd_names, percents=sorted_percents)
+    if settings.doClassification:
+        sorted_sd_names, _, _, sorted_percents = multiAnalyses_helper()
+        plot_superimposed_ROC(settings, sub_dir_names=sorted_sd_names, percents=sorted_percents)
+    else:
+        print("MultiAnalyses is only supported for classificaiton at this moment")
 
 if args.doQuickPlots:
     

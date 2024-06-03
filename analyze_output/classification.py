@@ -32,7 +32,7 @@ def combine_softmax(softmaxes, labels):
 
 
 def plot_rocs(runs, signal_labels, background_labels, selection=None, ax=None, fig_size=None, x_label="", y_label="",
-              x_lim=None, y_lim=None, y_log=None, x_log=None, legend='best', mode='rejection', fitqun=None, return_auc=False, **plot_args):
+              x_lim=None, y_lim=None, y_log=None, x_log=None, legend='best', mode='rejection', fitqun=None, **plot_args):
     """
     Plot overlaid ROC curves of results from a number of classification runs
 
@@ -116,10 +116,10 @@ def plot_rocs(runs, signal_labels, background_labels, selection=None, ax=None, f
     if legend:
         ax.legend(loc=legend)
     
-    if return_auc:
-        return fig, ax, auc
-    else:
-        return fig, ax
+    # if return_auc:
+    #     return fig, ax, auc
+    # else:
+    #     return fig, ax
 
 def plot_efficiency_profile(runs, binning, selection=None, select_labels=None, ax=None, fig_size=None, x_label="",
                             y_label="", legend='best', y_lim=None, label=None, **plot_args):
@@ -179,6 +179,9 @@ def plot_efficiency_profile(runs, binning, selection=None, select_labels=None, a
         ax.set_ylim(y_lim)
     return fig, ax
 
+# this can't be imported...
+def plot_rocs2():
+    return 'hello'
 
 class ClassificationRun(ABC):
     """Base class for classification results"""
