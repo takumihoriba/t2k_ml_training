@@ -244,6 +244,7 @@ def run_evaluation(count=1, dead_pmt_seed=5, dead_pmt_rate=.03, config_name='t2k
     '''
     Runs evaluation process for one time with parameter values, specific to 'turning off PMTs'
     Returns command line output of main.py in WatChMal.
+    Default is for classification.
     '''
     
     print(f"run_evaluation(count={count}, dead_pmt_seed={dead_pmt_seed}, dead_pmt_rate={dead_pmt_rate})")
@@ -459,18 +460,47 @@ if args.doEvaluation:
     subprocess.call(default_call)
     #end_training(settings)
 
+def summary_stats_1d(l):
+    '''
+    takes a list and returns a 1 x 7 numpy array containing a statistic in each column
+    Min, 25th percentile (Q1), 50th percentile (Q2, median), Mean, 75th percentile (Q3), Max, SD
+
+    Params: l: assume l is a list
+    ''' 
+    
+    if not isinstance(l, list):
+        raise TypeError(f"Expected a list, but got {type(l).__name__}"))
+
+    x = np.array(l) 
+    
+    return np.array([
+        np.min(x),
+        np.percentile(x, 25),
+        np.percentile(x, 50),
+        np.mean(x),
+        np.percentile(x, 75),
+        np.max(x),
+        np.std(x)
+    ])
+
+
 def multi_evaluations_classification(settings, probs=[.03, .05, .1], itr=10):
     acc_loss = None
     aucs = None
     avg_metrics = None
+
+    accuracy_summary = None
+    loss_summary = None
     
     for prob in probs:
         sums = np.zeros((1, 4)) # loss, accuracy, auc, auc
+        accuracies_per_prob = []
+        losses_per_prob = []
         for i in range(itr):
             s = i # seed
             r1 = run_evaluation(i, s, prob)
-            r2 = get_performance_stats(settings)
-            # r2 = np.array([.9 + .1*s*prob, .85 + .12*s*prob])
+            # r2 = get_performance_stats(settings)
+            r2 = np.array([.9 + .1*s*prob, .85 + .12*s*prob])
             print(r1.stdout)
             print(r1.stderr)
             # accuracy and loss
@@ -488,7 +518,7 @@ def multi_evaluations_classification(settings, probs=[.03, .05, .1], itr=10):
                 acc_loss = np.vstack((acc_loss, acc_loss_curr))
 
             # aucs
-            # aucs_curr = np.vstack(np.array([prob, s, s]), r2)
+            aucs_curr = np.vstack(np.array([prob, s, s]), r2)
             aucs_curr = r2
             if aucs is None:
                 aucs = aucs_curr
@@ -497,11 +527,22 @@ def multi_evaluations_classification(settings, probs=[.03, .05, .1], itr=10):
             
             sums += np.hstack((acc_loss_curr, aucs_curr))
 
+            accuracies_per_prob.append(acc_loss_curr[0])
+            losses_per_prob.append(acc_loss_curr[1])
+            
+
             dir_name = copy_npy(i, s, prob)
             np.savetxt(dir_name + 'accuracy_loss'+'.csv', acc_loss_curr, delimiter=',')
 
+        acc_summary_percent  = summary_stats_1d(accuracies_per_prob)
+        loss_summary_percent = summary_stats_1d(losses_per_prob)
 
-              
+        acc_summary_percent = np.hstack((np.array(round(prob * 100)), acc_summary_percent))
+        loss_summary_percent = np.hstack((np.array(round(prob * 100)), loss_summary_percent))
+
+        accuracy_summary = np.vstack((accuracy_summary, acc_summary_percent)) if accuracy_summary is None else acc_summary_percent 
+        loss_summary = np.vstack((loss_summary, loss_summary_percent)) if loss_summary is None else loss_summary_percent
+           
         print(f"[average loss, average accuracy, average AUC1, average AUC2] for dead prob of {prob} and {itr} iterations")
         print(sums/itr)
         if avg_metrics is None:
@@ -517,9 +558,12 @@ def multi_evaluations_classification(settings, probs=[.03, .05, .1], itr=10):
     np.savetxt(args.evaluationOutputDir + 'avg_metrics_with_percent' + date_time_str +'.csv', avg_metrics_percent, delimiter=',')
     
     np.savetxt(args.evaluationOutputDir + 'acc_loss_log_' + date_time_str +'.csv', acc_loss, delimiter=',')
-    np.savetxt(args.evaluationOutputDir + 'auc_log_' + date_time_str +'.csv', aucs, delimiter=',')
+    # np.savetxt(args.evaluationOutputDir + 'auc_log_' + date_time_str +'.csv', aucs, delimiter=',')
 
-    return avg_metrics_percent
+    np.savetxt(args.evaluationOutputDir + 'accuracy_summary_stats_per_percent' + date_time_str +'.csv', accuracy_summary, delimiter=',')
+    np.savetxt(args.evaluationOutputDir + 'loss_summary_stats_per_percent' + date_time_str +'.csv', loss_summary, delimiter=',')
+    
+    return accuracy_summary
 
 def multi_evaluations_regression(settings, probs=[.03, .05, .1], itr=10):
     losses = None
