@@ -79,6 +79,8 @@ def regression_analysis_perVar(from_path=True, dirpath='outputs', combine=True, 
                 var_min=100
         #Round max to nearest 100
         var_max = float(ceil((var_max-divisor)/100.0))*100.
+        if var_max > 4000:
+            var_max = 4000
     print(f"var min: {var_min}, var max: {var_max}, var num: {int((var_max-var_min)/divisor)+1}, divisor: {divisor}")
     var_bins = np.linspace(var_min,var_max, num=int((var_max-var_min)/divisor)+1)
     print(f"VAR BINS: {var_bins}")
@@ -358,7 +360,10 @@ def regression_analysis(from_path=True, dirpath='outputs', combine=True, true=No
              if ("positions"in target and "Global" in vertex_axis[i]) or ("directions" in target and "Angle" in vertex_axis[i]):
                  quantile = np.quantile(residuals_cut,0.68)
                  quantile_error = mquantiles_cimj(residuals_cut, prob=0.68)
+                 print('residual cut ', len(residuals_cut))
+                 print('quantile ', quantile_error)
                  #quantile_error = (quantile-np.ravel(quantile_error)[0], np.ravel(quantile_error)[1]-quantile)
+                #  print('quantile error from function', mquantiles_cimj(residuals_cut, prob=0.68))
              else:
                 (numerical_bot_quantile, numerical_top_quantile) = np.quantile(residuals_cut, [0.159,0.841])
                 #numerical_top_quantile = np.quantile(residuals_cut, 0.841)
@@ -366,6 +371,7 @@ def regression_analysis(from_path=True, dirpath='outputs', combine=True, true=No
                 quantile = np.quantile(np.abs(residuals_cut),0.68)
                 quantile_error = mquantiles_cimj(np.abs(residuals_cut), prob=[0.68])
                 #quantile_error = (((quantile_error[1][0] - quantile_error[0][0])/2),((quantile_error[1][1] - quantile_error[0][1])/2))
+             
              quantile_error = float((quantile_error[1]-quantile_error[0])/2.)
 
              yhist, xhist, _ = plt.hist(residuals_cut, bins=100, alpha=0.7, color=color, range=[-xlimit, xlimit])
@@ -391,6 +397,8 @@ def regression_analysis(from_path=True, dirpath='outputs', combine=True, true=No
              if "momenta" in target or "momentum" in target:
                 plt.text(0.6, 0.7, '{} \n $\mu$ = {:.5f} $\pm${} {} \n Quant. = {:.5f} $\pm${} {}'.format(extra_string, round(numerical_median,dec_to_round), round_sig(median_error), unit, round(quantile, dec_to_round), round_sig(quantile_error), unit), fontsize=9, transform = plt.gca().transAxes, bbox=dict(facecolor='white', edgecolor='black', boxstyle='round,pad=1'))
              else:
+                print('median error: ', median_error)
+                print('quantile_error:', quantile_error) # there is nan in quantile error
                 plt.text(0.6, 0.7, '{} \n $\mu$ = {:.2f} $\pm${} {} \n Quant. = {:.2f} $\pm${} {}'.format(extra_string, round(numerical_median,dec_to_round), round_sig(median_error), unit, round(quantile, dec_to_round), round_sig(quantile_error), unit), fontsize=9, transform = plt.gca().transAxes, bbox=dict(facecolor='white', edgecolor='black', boxstyle='round,pad=1'))
 
              if "positions"in target and "Global" in vertex_axis[i]:

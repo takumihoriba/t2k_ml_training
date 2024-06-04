@@ -240,7 +240,7 @@ def get_performance_stats(settings, variable_list=[], variables=[]):
     # print(f'AUC: {auc}')
     # return np.array([auc_ovr, auc_ovo])
 
-def run_evaluation(count=1, dead_pmt_seed=5, dead_pmt_rate=.03):
+def run_evaluation(count=1, dead_pmt_seed=5, dead_pmt_rate=.03, config_name='t2k_resnet_eval_classifier'):
     '''
     Runs evaluation process for one time with parameter values, specific to 'turning off PMTs'
     Returns command line output of main.py in WatChMal.
@@ -252,11 +252,11 @@ def run_evaluation(count=1, dead_pmt_seed=5, dead_pmt_rate=.03):
     settings = utils()
     settings.outputPath = args.evaluationOutputDir
     settings.set_output_directory()
-    default_call = ["python", "WatChMaL/main.py", "--config-name=t2k_resnet_eval_classifier"] 
+    default_call = ["python", "WatChMaL/main.py", f"--config-name={config_name}"] 
     indicesFile = check_list_and_convert(settings.indicesFile)
     perm_output_path = settings.outputPath
 
-    default_call = ["python", "WatChMaL/main.py", "--config-name=t2k_resnet_eval_classifier"] 
+    # default_call = ["python", "WatChMaL/main.py", "--config-name=t2k_resnet_eval_classifier"] 
     settings.outputPath = args.evaluationInputDir
     
 
@@ -264,7 +264,7 @@ def run_evaluation(count=1, dead_pmt_seed=5, dead_pmt_rate=.03):
     default_call.append("dump_path=" +str(args.evaluationOutputDir))
     # default_call.append("dump_path=" + dump_path)
     print(default_call)
-    default_call += [f"data.dataset.dead_pmt_rate={dead_pmt_rate if dead_pmt_rate > 0. else 'null'}", f"data.dataset.dead_pmt_seed={dead_pmt_seed}"]
+    default_call += [f"+data.dataset.dead_pmt_rate={dead_pmt_rate if dead_pmt_rate > 0. else 'null'}", f"+data.dataset.dead_pmt_seed={dead_pmt_seed}"]
     # for now just pmt rate
 
     # subprocess.call(default_call)
@@ -296,8 +296,43 @@ def copy_npy(i, s, p):
     source_dir = args.evaluationOutputDir
     # cp_command = f'cp {source_dir}/labels.npy {dir_name}'
     
-    # copy result of evaluation
+    # copy result files of evaluation
     cp_command = ["cp", f"{source_dir}/indices.npy",f"{source_dir}/labels.npy",f"{source_dir}/softmax.npy", dir_name]
+    
+    result = subprocess.run(cp_command, capture_output=True, text=True)
+    print(result.stdout)
+    print(result.stderr)
+
+    # copy .hydra files recursively
+    cp_command = ["cp", "-r", f"{source_dir}/.hydra", dir_name]
+    result = subprocess.run(cp_command, capture_output=True, text=True)
+    print(result.stdout)
+    print(result.stderr)
+
+    return dir_name
+
+def copy_npy_regress(i, s, p):
+    '''
+    Copies *.npy files and .hydra directory (and its files inside) into a new folder
+    Returns nothing.
+
+    Parameters
+    ----------
+    i: iteration
+    s: seed
+    p: probability
+        In [0, 1]
+
+    '''
+    date_time_str = datetime.today().strftime("%Y%m%d%H%M%S")
+    dir_name = args.evaluationOutputDir + f'multiEval_seed_{s}_{i}th_itr_{round(p*100)}_percent_{date_time_str}/'
+    os.makedirs(dir_name, exist_ok=True)
+    source_dir = args.evaluationOutputDir
+    # cp_command = f'cp {source_dir}/labels.npy {dir_name}'
+    
+    # copy result files of evaluation
+    cp_command = ["cp", f"{source_dir}/indices.npy",f"{source_dir}/labels.npy",f"{source_dir}/positions.npy",f"{source_dir}/predicted_positions.npy", dir_name]
+    
     result = subprocess.run(cp_command, capture_output=True, text=True)
     print(result.stdout)
     print(result.stderr)
@@ -408,11 +443,13 @@ if args.doEvaluation:
     settings = utils()
     settings.outputPath = args.evaluationOutputDir
     settings.set_output_directory()
-    default_call = ["python", "WatChMaL/main.py", "--config-name=t2k_resnet_eval_classifier"] 
+    # default_call = ["python", "WatChMaL/main.py", "--config-name=t2k_resnet_eval_classifier"] 
+    default_call = ["python", "WatChMaL/main.py", "--config-name=t2k_resnet_eval"] # for regression
+    
     indicesFile = check_list_and_convert(settings.indicesFile)
     perm_output_path = settings.outputPath
 
-    default_call = ["python", "WatChMaL/main.py", "--config-name=t2k_resnet_eval_classifier"] 
+    # default_call = ["python", "WatChMaL/main.py", "--config-name=t2k_resnet_eval_classifier"] 
 
 
     settings.outputPath = args.evaluationInputDir
@@ -422,22 +459,7 @@ if args.doEvaluation:
     subprocess.call(default_call)
     #end_training(settings)
 
-if args.doMultiEvaluations:
-    # a = np.ones((3, 5))
-    # np.savetxt(args.evaluationOutputDir + 'avg_metrics_' + datetime.today().strftime("%Y%m%d%H%M%S") +'.csv', a, delimiter=',')
-    settings = utils()
-    # print(get_performance_stats(settings))
-
-    # debug
-    # print(get_performance_stats(settings))
-
-
-    ###################
-
-
-    # actual doMultiEval
-    probs = [0.1]
-    itr = 3
+def multi_evaluations_classification(settings, probs=[.03, .05, .1], itr=10):
     acc_loss = None
     aucs = None
     avg_metrics = None
@@ -496,6 +518,144 @@ if args.doMultiEvaluations:
     
     np.savetxt(args.evaluationOutputDir + 'acc_loss_log_' + date_time_str +'.csv', acc_loss, delimiter=',')
     np.savetxt(args.evaluationOutputDir + 'auc_log_' + date_time_str +'.csv', aucs, delimiter=',')
+
+    return avg_metrics_percent
+
+def multi_evaluations_regression(settings, probs=[.03, .05, .1], itr=10):
+    losses = None
+    avg_metrics = None
+    
+    for prob in probs:
+        sums = None # np.zeros((1, 1)) # loss
+        for i in range(itr):
+            s = i # seed
+            r1 = run_evaluation(i, s, prob, config_name='t2k_resnet_eval')
+            print(r1.stdout)
+            print(r1.stderr)
+            # accuracy and loss
+            loss_curr = re.findall(r'Average evaluation .*: (\d*\.\d*)', r1.stdout)
+            loss_curr = np.array([float(m) for m in loss_curr])
+
+            if losses is None:
+                losses = loss_curr
+            else:
+                losses = np.vstack((losses, loss_curr))
+            
+            if sums is None:
+                sums = loss_curr
+            else:
+                sums += loss_curr
+
+            dir_name = copy_npy_regress(i, s, prob)
+            np.savetxt(dir_name + 'loss.csv', loss_curr, delimiter=',')
+              
+        print(f"[average loss] for dead prob of {prob} and {itr} iterations")
+        print(sums/itr)
+        if avg_metrics is None:
+            avg_metrics = sums / itr
+        else:
+            avg_metrics = np.vstack((avg_metrics, sums/itr))
+    
+    print("avg metrics:", avg_metrics)
+    # np.savetxt('avg_metrics.csv', avg_metrics, delimiter=',')
+    date_time_str = datetime.today().strftime("%Y%m%d%H%M%S")
+    np.savetxt(args.evaluationOutputDir + 'avg_metrics_' + date_time_str +'.csv', avg_metrics, delimiter=',')
+    avg_metrics_percent = np.insert(avg_metrics, 0, np.array(probs), axis = 1)
+    np.savetxt(args.evaluationOutputDir + 'avg_metrics_with_percent' + date_time_str +'.csv', avg_metrics_percent, delimiter=',')
+    np.savetxt(args.evaluationOutputDir + 'loss_log_' + date_time_str +'.csv', losses, delimiter=',')
+
+    return avg_metrics_percent
+
+if args.doMultiEvaluations:
+    '''
+    Modify probs and itr, and flag variables to customize your evaluations.
+    dead_pmt_rates: list of dead PMT rates
+    iterations_per_rate: how many times you want to run evaluation per dead PMT rate
+    classify: flag variable to tell if you want to do this for classificaiton model
+    regress:  similarly, for regression model
+    '''
+    settings = utils()
+
+    # TODO: Modify these values.
+    classify = 0
+    regress  = 1
+
+    dead_pmt_rates = [0.03, 0.05, 0.1]
+    iterations_per_rate = 5
+
+
+    if classify:
+        matrix = multi_evaluations_classification(settings, probs=dead_pmt_rates, itr=iterations_per_rate)
+        print(matrix)
+    if regress:
+        matrix = multi_evaluations_regression(settings, probs=dead_pmt_rates, itr=iterations_per_rate)
+        print(matrix)
+
+
+
+
+
+    # # actual doMultiEval
+    # probs = [0.1]
+    # itr = 3
+    # acc_loss = None
+    # aucs = None
+    # avg_metrics = None
+    
+    # for prob in probs:
+    #     sums = np.zeros((1, 4)) # loss, accuracy, auc, auc
+    #     for i in range(itr):
+    #         s = i # seed
+    #         r1 = run_evaluation(i, s, prob)
+    #         r2 = get_performance_stats(settings)
+    #         # r2 = np.array([.9 + .1*s*prob, .85 + .12*s*prob])
+    #         print(r1.stdout)
+    #         print(r1.stderr)
+    #         # accuracy and loss
+    #         acc_loss_curr = re.findall(r'Average evaluation .*: (\d*\.\d*)', r1.stdout)
+    #         # acc_loss_curr = np.array([0.5 +.1*s*prob, .7+.1*s*prob])
+    #         acc_loss_curr = np.array([float(m) for m in acc_loss_curr])
+
+            
+
+    #         # acc_loss_curr = np.vstack(np.array([prob, s, s]), acc_loss_curr)
+            
+    #         if acc_loss is None:
+    #             acc_loss = acc_loss_curr
+    #         else:
+    #             acc_loss = np.vstack((acc_loss, acc_loss_curr))
+
+    #         # aucs
+    #         # aucs_curr = np.vstack(np.array([prob, s, s]), r2)
+    #         aucs_curr = r2
+    #         if aucs is None:
+    #             aucs = aucs_curr
+    #         else:
+    #             aucs = np.vstack((aucs, aucs_curr))
+            
+    #         sums += np.hstack((acc_loss_curr, aucs_curr))
+
+    #         dir_name = copy_npy(i, s, prob)
+    #         np.savetxt(dir_name + 'accuracy_loss'+'.csv', acc_loss_curr, delimiter=',')
+
+
+              
+    #     print(f"[average loss, average accuracy, average AUC1, average AUC2] for dead prob of {prob} and {itr} iterations")
+    #     print(sums/itr)
+    #     if avg_metrics is None:
+    #         avg_metrics = sums / itr
+    #     else:
+    #         avg_metrics = np.vstack((avg_metrics, sums/itr))
+    
+    # print("avg metrics:", avg_metrics)
+    # # np.savetxt('avg_metrics.csv', avg_metrics, delimiter=',')
+    # date_time_str = datetime.today().strftime("%Y%m%d%H%M%S")
+    # np.savetxt(args.evaluationOutputDir + 'avg_metrics_' + date_time_str +'.csv', avg_metrics, delimiter=',')
+    # avg_metrics_percent = np.insert(avg_metrics, 0, np.array(probs), axis = 1)
+    # np.savetxt(args.evaluationOutputDir + 'avg_metrics_with_percent' + date_time_str +'.csv', avg_metrics_percent, delimiter=',')
+    
+    # np.savetxt(args.evaluationOutputDir + 'acc_loss_log_' + date_time_str +'.csv', acc_loss, delimiter=',')
+    # np.savetxt(args.evaluationOutputDir + 'auc_log_' + date_time_str +'.csv', aucs, delimiter=',')
 
 def multiAnalyses_helper(evalOutputDir=None, sort_by_percent=True):
     '''

@@ -129,6 +129,8 @@ def analyze_fitqun_regression(settings):
 
      true_0, pred_0, ve_0, tw_0, nhits_0, dir_0 = [], [], [], [], [], []
      true_1, pred_1, ve_1, tw_1, nhits_1, dir_1 = [], [], [], [], [], []
+     true_2, pred_2, ve_2, tw_2, nhits_2, dir_2 = [], [], [], [], [], []
+     
      for i in range(len(fitqun_labels)):
          # LABEL 0 - muons  
          if fitqun_labels[i] == 0:
@@ -140,13 +142,22 @@ def analyze_fitqun_regression(settings):
              dir_0.append(directions[i])
 
          # LABEL 1 - electrons  
-         else:
+         elif fitqun_labels[i] == 1:
              true_1.append(truth[i])
              pred_1.append(fitqun_e[i])
              ve_1.append(visible_energy[i])
              tw_1.append(towall[i])
              nhits_1.append(nhits[i])
              dir_1.append(directions[i])
+        
+        # label 2 -- pions
+         else:
+             true_2.append(truth[i])
+             pred_2.append(fitqun_e[i])
+             ve_2.append(visible_energy[i])
+             tw_2.append(towall[i])
+             nhits_2.append(nhits[i])
+             dir_2.append(directions[i])
 
      # convert lists to arrayss
      true_0 = np.array(true_0)
