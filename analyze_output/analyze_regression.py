@@ -64,6 +64,11 @@ def analyze_regression(settings):
 
     if settings.doML:
         #vertex_axis_ml, quantile_lst_ml, quantile_error_lst_ml, median_lst_ml, median_error_lst_ml = analyze_ml_regression(settings)
+        print(settings.particleLabel)
+        print(settings.inputPath)
+        print(settings.fitqunPath)
+        print(settings.mlPath)
+        print(settings.target)
         single_ml_analysis, multi_ml_analysis = analyze_ml_regression(settings) 
         #print(f"SINGLE ANALYSIS: {single_ml_analysis}")
         #print(f"MULTI ANALYSIS: {multi_ml_analysis}")

@@ -7,12 +7,12 @@ import os
 
 import h5py
 
-from analysis.classification import WatChMaLClassification
-from analysis.classification import plot_efficiency_profile, plot_rocs
-from analysis.utils.plotting import plot_legend
-from analysis.utils.binning import get_binning
-from analysis.utils.fitqun import read_fitqun_file, make_fitqunlike_discr, get_rootfile_eventid_hash, plot_fitqun_comparison
-import analysis.utils.math as math
+from WatChMaL.analysis.classification import WatChMaLClassification
+from WatChMaL.analysis.classification import plot_efficiency_profile, plot_rocs
+from WatChMaL.analysis.utils.plotting import plot_legend
+from WatChMaL.analysis.utils.binning import get_binning
+from WatChMaL.analysis.utils.fitqun import read_fitqun_file, make_fitqunlike_discr, get_rootfile_eventid_hash, plot_fitqun_comparison
+import WatChMaL.analysis.utils.math as math
 
 import matplotlib
 from matplotlib import pyplot as plt
@@ -144,8 +144,8 @@ def analyze_classification(settings):
     nhit_cut = nhits > 0 #25
     towall_cut = towall > 100
     # veto_cut = (veto == 0)
-    hy_electrons = (labels == 0)
-    hy_muons = (labels == 2)
+    hy_electrons = (labels == 1)
+    hy_muons = (labels == 0)
     print(f"hy_electrons: {hy_electrons.shape}, hy_muons: {hy_muons.shape}, nhit_cut: {nhit_cut.shape}, towall_cut: {towall_cut.shape}")
     basic_cuts = ((hy_electrons | hy_muons) & nhit_cut & towall_cut)
 
@@ -164,14 +164,14 @@ def analyze_classification(settings):
     polar_binning = get_binning(np.cos(angles[:,0]), 10, -1, 1)
     az_binning = get_binning(angles[:,1]*180/np.pi, 10, -180, 180)
     mom_binning = get_binning(momentum, 9, minimum=100, maximum=1000)
-    total_charge_binning = get_binning(total_charge, 20, minimum=0, maximum=4000)
+    total_charge_binning = get_binning(total_charge, 50, minimum=0, maximum=10000)
     visible_energy_binning = get_binning(ml_visible_energy, 10, minimum=0, maximum=1000)
     dwall_binning = get_binning(dwall, 15, minimum=0, maximum=1600)
     towall_binning = get_binning(towall, 30, minimum=0, maximum=3000)
 
     # create watchmal classification object to be used as runs for plotting the efficiency relative to event angle  
     stride1 = settings.mlPath
-    run_result = [WatChMaLClassification(stride1, 'test', labels, idx, basic_cuts, color="blue", linestyle='-')]
+    run_result = [WatChMaLClassification(stride1, 'ResNet', labels, idx, basic_cuts, color="blue", linestyle='-')]
     print(f"UNIQUE IN LABLES: {np.unique(fitqun_labels, return_counts=True)}")
 
     
@@ -180,12 +180,12 @@ def analyze_classification(settings):
 
     #Fitqun
     if do_fitqun:
-        fitqun_hy_electrons = (fitqun_labels == 0)
-        fitqun_hy_muons = (fitqun_labels == 2)
+        fitqun_hy_electrons = (fitqun_labels == 1)
+        fitqun_hy_muons = (fitqun_labels == 0)
         fitqun_basic_cuts = ((fitqun_hy_electrons | fitqun_hy_muons) & (fitqun_towall > 100))
         fitqun_mom_binning = get_binning(fitqun_mom, 9, minimum=100, maximum=1000)
         fitqun_ve_binning = get_binning(fitqun_visible_energy, 10, minimum=0, maximum=1000)
-        fitqun_tc_binning = get_binning(fitqun_total_charge, 20, minimum=0, maximum=4000)
+        fitqun_tc_binning = get_binning(fitqun_total_charge, 50, minimum=0, maximum=10000)
         fitqun_towall_binning = get_binning(fitqun_towall, 30, minimum=0, maximum=3000)
         fitqun_az_binning = get_binning(fitqun_az, 10, minimum=-180, maximum=180)
         fitqun_polar_binning = get_binning(fitqun_polar, 10, minimum=-1, maximum=1)
@@ -200,17 +200,17 @@ def analyze_classification(settings):
     if True:
         #For electron/muon
         #ALSO have to change e/mu definitions for fitqun and ML
-        #cut_pi_discr = fitqun_discr[fitqun_basic_cuts]
-        #fitqun_pi_eff = np.sum(cut_pi_discr[fitqun_labels[fitqun_basic_cuts] == 1])/len(cut_pi_discr[fitqun_labels[fitqun_basic_cuts]==1])
-        #fitqun_bkg_rej = np.abs(np.sum(cut_pi_discr[fitqun_labels[fitqun_basic_cuts] == 0]-1))/len(cut_pi_discr[fitqun_labels[fitqun_basic_cuts]==0])
+        cut_pi_discr = fitqun_discr[fitqun_basic_cuts]
+        fitqun_pi_eff = np.sum(cut_pi_discr[fitqun_labels[fitqun_basic_cuts] == 1])/len(cut_pi_discr[fitqun_labels[fitqun_basic_cuts]==1])
+        fitqun_bkg_rej = np.abs(np.sum(cut_pi_discr[fitqun_labels[fitqun_basic_cuts] == 0]-1))/len(cut_pi_discr[fitqun_labels[fitqun_basic_cuts]==0])
         #For mu/pi+
-        cut_pi_discr = fitqun_pi_discr[fitqun_basic_cuts]
-        fitqun_pi_eff = np.sum(cut_pi_discr[fitqun_labels[fitqun_basic_cuts] ==0])/len(cut_pi_discr[fitqun_labels[fitqun_basic_cuts]==0])
-        fitqun_bkg_rej = np.abs(np.sum(cut_pi_discr[fitqun_labels[fitqun_basic_cuts] == 2]-1))/len(cut_pi_discr[fitqun_labels[fitqun_basic_cuts]==2])
+        #cut_pi_discr = fitqun_pi_discr[fitqun_basic_cuts]
+        #fitqun_pi_eff = np.sum(cut_pi_discr[fitqun_labels[fitqun_basic_cuts] ==0])/len(cut_pi_discr[fitqun_labels[fitqun_basic_cuts]==0])
+        #fitqun_bkg_rej = np.abs(np.sum(cut_pi_discr[fitqun_labels[fitqun_basic_cuts] == 2]-1))/len(cut_pi_discr[fitqun_labels[fitqun_basic_cuts]==2])
         print(f"fiTQun signal efficiency: {fitqun_pi_eff}, fiTQun bkg rejection: {fitqun_bkg_rej}")
-        fig_roc, ax_roc = plot_rocs(run_result, e_label, mu_label, selection=basic_cuts, x_label="Muon Tagging Efficiency", y_label="Pi+ Rejection",
-                legend='best', mode='rejection', fitqun=(fitqun_pi_eff, fitqun_bkg_rej), label='ML')
-        fig_roc.savefig(settings.outputPlotPath + '/ml_pi_roc.png', format='png')
+        fig_roc, ax_roc = plot_rocs(run_result, e_label, mu_label, selection=basic_cuts, x_label="Electron Tagging Efficiency", y_label="Muon Rejection",
+                legend='best', mode='rejection', fitqun=(fitqun_pi_eff, fitqun_bkg_rej), label='ML', x_lim=(0.85,1.0), y_lim=(0.5,1100))
+        fig_roc.savefig(settings.outputPlotPath + '/ml_e_mu_roc.png', format='png')
 
     # calculate the thresholds that reject 99.9% of muons and apply cut to all events
     muon_rejection = 0.961

@@ -4,9 +4,9 @@ from scipy.optimize import minimize_scalar
 from abc import ABC, abstractmethod
 from sklearn import metrics
 
-from analysis.utils.binning import apply_binning, binned_quantiles, binned_efficiencies
-import analysis.utils.plotting as plot
-from analysis.read import WatChMaLOutput
+from WatChMaL.analysis.utils.binning import apply_binning, binned_quantiles, binned_efficiencies
+import WatChMaL.analysis.utils.plotting as plot
+from WatChMaL.analysis.read import WatChMaLOutput
 
 
 def combine_softmax(softmaxes, labels):

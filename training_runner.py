@@ -16,13 +16,13 @@ import subprocess
 #from analysis.classification import WatChMaLClassification
 #from analysis.classification import plot_efficiency_profile
 #from analysis.utils.plotting import plot_legend
-import analysis.utils.math as math
+import WatChMaL.analysis.utils.math as math
 
 from analyze_output.analyze_regression import analyze_regression
 from analyze_output.analyze_classification import analyze_classification
 
 from runner_util import utils, analysisUtils, train_config, make_split_file
-from analysis.utils.binning import get_binning
+from WatChMaL.analysis.utils.binning import get_binning
 
 
 from torchmetrics import AUROC, ROC
@@ -103,11 +103,7 @@ def init_training():
 
     settings = utils()
     settings.set_output_directory()
-<<<<<<< HEAD
-    default_call = ["python", "WatChMaL/main.py", "--config-name=t2k_resnet_train"] 
-=======
     default_call = ["python", "WatChMaL/main.py", "--config-name="+settings.configName] 
->>>>>>> 5a1708293ae7a7df88acab8a2ad2482739ce07a6
     indicesFile = check_list_and_convert(settings.indicesFile)
     #Make sure the name of file matches the one you copy/set in util_config.ini
     if settings.batchSystem:

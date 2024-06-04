@@ -16,7 +16,7 @@ import WatChMaL.analysis.utils.fitqun as fq
 
 from tqdm import tqdm
 
-import analysis.utils.math as math
+import WatChMaL.analysis.utils.math as math
 
 from plotting import regression_analysis, regression_analysis_perVar
 from analyze_output.utils.math import get_cherenkov_threshold
@@ -146,7 +146,7 @@ def analyze_fitqun_regression(settings):
              nhits_0.append(nhits[i])
              dir_0.append(directions[i])
 
-         if fitqun_labels[i] == 2:
+         elif fitqun_labels[i] == 2:
              true_2.append(truth[i])
              pred_2.append(fitqun_pi[i])
              ve_2.append(visible_energy[i])

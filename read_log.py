@@ -56,7 +56,7 @@ for i, file in enumerate(files):
 
 plt.xlabel("Iteration")
 plt.ylabel("Loss")
-plt.ylim(0.01,10)
+plt.ylim(0.1,10)
 plt.yscale('log')
 plt.legend()
 plt.savefig(output_path)

@@ -13,7 +13,7 @@ from scipy.optimize import curve_fit
 
 from math import log
 
-import analysis.utils.math as math
+import WatChMaL.analysis.utils.math as math
 
 
 #from WatChMaL.watchmal.model.pointnet import PointNetFeat

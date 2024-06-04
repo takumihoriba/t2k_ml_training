@@ -11,7 +11,7 @@ from plotting import regression_analysis, regression_analysis_perVar
 from analyze_output.utils.math import get_cherenkov_threshold
 
 import WatChMaL.analysis.utils.fitqun as fq
-import analysis.utils.math as math
+import WatChMaL.analysis.utils.math as math
 
 import h5py
 

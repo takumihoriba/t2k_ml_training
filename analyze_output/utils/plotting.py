@@ -6,7 +6,7 @@ import matplotlib
 from matplotlib import pyplot as plt
 from matplotlib.offsetbox import AnchoredText
 
-import analysis.utils.binning as bins
+import WatChMaL.analysis.utils.binning as bins
 
 
 def combine_legends(ax):
