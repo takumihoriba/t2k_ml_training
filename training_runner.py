@@ -20,7 +20,8 @@ import re
 import WatChMaL.analysis.utils.math as math
 
 from analyze_output.analyze_regression import analyze_regression
-from analyze_output.analyze_classification import analyze_classification, plot_superimposed_ROC, some_exp
+from analyze_output.analyze_classification import analyze_classification, plot_superimposed_ROC, some_exp, plot_simple_ROCs
+from analyze_output.analyze_multiple_classification import MultiRegressionAnalysis
 
 from runner_util import utils, analysisUtils, train_config, make_split_file
 from WatChMaL.analysis.utils.binning import get_binning
@@ -265,7 +266,7 @@ def run_evaluation(count=1, dead_pmt_seed=5, dead_pmt_rate=.03, config_name='t2k
     default_call.append("dump_path=" +str(args.evaluationOutputDir))
     # default_call.append("dump_path=" + dump_path)
     print(default_call)
-    default_call += [f"+data.dataset.dead_pmt_rate={dead_pmt_rate if dead_pmt_rate > 0. else 'null'}", f"+data.dataset.dead_pmt_seed={dead_pmt_seed}"]
+    default_call += [f"data.dataset.dead_pmt_rate={dead_pmt_rate if dead_pmt_rate > 0. else 'null'}", f"data.dataset.dead_pmt_seed={dead_pmt_seed}"]
     # for now just pmt rate
 
     # subprocess.call(default_call)
@@ -444,14 +445,17 @@ if args.doEvaluation:
     settings = utils()
     settings.outputPath = args.evaluationOutputDir
     settings.set_output_directory()
-    # default_call = ["python", "WatChMaL/main.py", "--config-name=t2k_resnet_eval_classifier"] 
-    default_call = ["python", "WatChMaL/main.py", "--config-name=t2k_resnet_eval"] # for regression
+    # default_call = ["python", "WatChMaL/main.py", "--config-name=t2k_resnet_eval_classifier"] # classification
+    # default_call = ["python", "WatChMaL/main.py", "--config-name=t2k_resnet_eval"] # regress
+    default_call = ["python", "WatChMaL/main.py", "--config-name=t2k_resnet_eval_dead"] # regress
+    
     
     indicesFile = check_list_and_convert(settings.indicesFile)
     perm_output_path = settings.outputPath
 
     # default_call = ["python", "WatChMaL/main.py", "--config-name=t2k_resnet_eval_classifier"] 
-
+    # default_call = ["python", "WatChMaL/main.py", "--config-name=t2k_resnet_eval"]
+    default_call = ["python", "WatChMaL/main.py", "--config-name=t2k_resnet_eval_dead"]
 
     settings.outputPath = args.evaluationInputDir
     default_call.append("hydra.run.dir=" +str(args.evaluationInputDir))
@@ -462,14 +466,14 @@ if args.doEvaluation:
 
 def summary_stats_1d(l):
     '''
-    takes a list and returns a 1 x 7 numpy array containing a statistic in each column
+    takes a list and returns a (7,) numpy array containing a statistic in each column
     Min, 25th percentile (Q1), 50th percentile (Q2, median), Mean, 75th percentile (Q3), Max, SD
 
     Params: l: assume l is a list
     ''' 
     
     if not isinstance(l, list):
-        raise TypeError(f"Expected a list, but got {type(l).__name__}"))
+        raise TypeError(f"Expected a list, but got {type(l).__name__}")
 
     x = np.array(l) 
     
@@ -485,84 +489,54 @@ def summary_stats_1d(l):
 
 
 def multi_evaluations_classification(settings, probs=[.03, .05, .1], itr=10):
-    acc_loss = None
-    aucs = None
-    avg_metrics = None
-
     accuracy_summary = None
     loss_summary = None
     
     for prob in probs:
-        sums = np.zeros((1, 4)) # loss, accuracy, auc, auc
         accuracies_per_prob = []
         losses_per_prob = []
         for i in range(itr):
-            s = i # seed
+            # set seed and run evaluation. print output
+            s = i
             r1 = run_evaluation(i, s, prob)
-            # r2 = get_performance_stats(settings)
-            r2 = np.array([.9 + .1*s*prob, .85 + .12*s*prob])
             print(r1.stdout)
             print(r1.stderr)
-            # accuracy and loss
+
+            # get loss and accuacy from the output
             acc_loss_curr = re.findall(r'Average evaluation .*: (\d*\.\d*)', r1.stdout)
-            # acc_loss_curr = np.array([0.5 +.1*s*prob, .7+.1*s*prob])
             acc_loss_curr = np.array([float(m) for m in acc_loss_curr])
 
+            # collect accuracy and loss for this iteration
+            accuracies_per_prob.append(acc_loss_curr[1])
+            losses_per_prob.append(acc_loss_curr[0])
             
-
-            # acc_loss_curr = np.vstack(np.array([prob, s, s]), acc_loss_curr)
-            
-            if acc_loss is None:
-                acc_loss = acc_loss_curr
-            else:
-                acc_loss = np.vstack((acc_loss, acc_loss_curr))
-
-            # aucs
-            aucs_curr = np.vstack(np.array([prob, s, s]), r2)
-            aucs_curr = r2
-            if aucs is None:
-                aucs = aucs_curr
-            else:
-                aucs = np.vstack((aucs, aucs_curr))
-            
-            sums += np.hstack((acc_loss_curr, aucs_curr))
-
-            accuracies_per_prob.append(acc_loss_curr[0])
-            losses_per_prob.append(acc_loss_curr[1])
-            
-
+            # copy evaluation ouputs to a new folder (sub-directory); save accuracy and loss as csv
             dir_name = copy_npy(i, s, prob)
             np.savetxt(dir_name + 'accuracy_loss'+'.csv', acc_loss_curr, delimiter=',')
+
+            if prob == 0. or prob == 0:
+                break
 
         acc_summary_percent  = summary_stats_1d(accuracies_per_prob)
         loss_summary_percent = summary_stats_1d(losses_per_prob)
 
-        acc_summary_percent = np.hstack((np.array(round(prob * 100)), acc_summary_percent))
-        loss_summary_percent = np.hstack((np.array(round(prob * 100)), loss_summary_percent))
+        # acc_summary_percent = np.hstack((np.array(round(prob * 100)), acc_summary_percent))
+        # loss_summary_percent = np.hstack((np.array(round(prob * 100)), loss_summary_percent))
+        acc_summary_percent  = np.insert(acc_summary_percent,  0, round(prob * 100))
+        loss_summary_percent = np.insert(loss_summary_percent, 0, round(prob * 100))
+        
+        
+        accuracy_summary = np.vstack((accuracy_summary, acc_summary_percent)) if accuracy_summary is not None else acc_summary_percent 
+        loss_summary = np.vstack((loss_summary, loss_summary_percent)) if loss_summary is not None else loss_summary_percent
+        
 
-        accuracy_summary = np.vstack((accuracy_summary, acc_summary_percent)) if accuracy_summary is None else acc_summary_percent 
-        loss_summary = np.vstack((loss_summary, loss_summary_percent)) if loss_summary is None else loss_summary_percent
-           
-        print(f"[average loss, average accuracy, average AUC1, average AUC2] for dead prob of {prob} and {itr} iterations")
-        print(sums/itr)
-        if avg_metrics is None:
-            avg_metrics = sums / itr
-        else:
-            avg_metrics = np.vstack((avg_metrics, sums/itr))
+        print("summary stats for accuracy: ", accuracy_summary)
+        print("summary stats for loss: ", loss_summary)
     
-    print("avg metrics:", avg_metrics)
-    # np.savetxt('avg_metrics.csv', avg_metrics, delimiter=',')
     date_time_str = datetime.today().strftime("%Y%m%d%H%M%S")
-    np.savetxt(args.evaluationOutputDir + 'avg_metrics_' + date_time_str +'.csv', avg_metrics, delimiter=',')
-    avg_metrics_percent = np.insert(avg_metrics, 0, np.array(probs), axis = 1)
-    np.savetxt(args.evaluationOutputDir + 'avg_metrics_with_percent' + date_time_str +'.csv', avg_metrics_percent, delimiter=',')
-    
-    np.savetxt(args.evaluationOutputDir + 'acc_loss_log_' + date_time_str +'.csv', acc_loss, delimiter=',')
-    # np.savetxt(args.evaluationOutputDir + 'auc_log_' + date_time_str +'.csv', aucs, delimiter=',')
-
     np.savetxt(args.evaluationOutputDir + 'accuracy_summary_stats_per_percent' + date_time_str +'.csv', accuracy_summary, delimiter=',')
     np.savetxt(args.evaluationOutputDir + 'loss_summary_stats_per_percent' + date_time_str +'.csv', loss_summary, delimiter=',')
-    
+
     return accuracy_summary
 
 def multi_evaluations_regression(settings, probs=[.03, .05, .1], itr=10):
@@ -621,12 +595,11 @@ if args.doMultiEvaluations:
     settings = utils()
 
     # TODO: Modify these values.
-    classify = 0
-    regress  = 1
+    classify = 1
+    regress  = 0
 
-    dead_pmt_rates = [0.03, 0.05, 0.1]
-    iterations_per_rate = 5
-
+    dead_pmt_rates = [0.0, 0.03, 0.05, 0.1] # [0.03, 0.05, 0.1]
+    iterations_per_rate = 15
 
     if classify:
         matrix = multi_evaluations_classification(settings, probs=dead_pmt_rates, itr=iterations_per_rate)
@@ -635,78 +608,13 @@ if args.doMultiEvaluations:
         matrix = multi_evaluations_regression(settings, probs=dead_pmt_rates, itr=iterations_per_rate)
         print(matrix)
 
-
-
-
-
-    # # actual doMultiEval
-    # probs = [0.1]
-    # itr = 3
-    # acc_loss = None
-    # aucs = None
-    # avg_metrics = None
-    
-    # for prob in probs:
-    #     sums = np.zeros((1, 4)) # loss, accuracy, auc, auc
-    #     for i in range(itr):
-    #         s = i # seed
-    #         r1 = run_evaluation(i, s, prob)
-    #         r2 = get_performance_stats(settings)
-    #         # r2 = np.array([.9 + .1*s*prob, .85 + .12*s*prob])
-    #         print(r1.stdout)
-    #         print(r1.stderr)
-    #         # accuracy and loss
-    #         acc_loss_curr = re.findall(r'Average evaluation .*: (\d*\.\d*)', r1.stdout)
-    #         # acc_loss_curr = np.array([0.5 +.1*s*prob, .7+.1*s*prob])
-    #         acc_loss_curr = np.array([float(m) for m in acc_loss_curr])
-
-            
-
-    #         # acc_loss_curr = np.vstack(np.array([prob, s, s]), acc_loss_curr)
-            
-    #         if acc_loss is None:
-    #             acc_loss = acc_loss_curr
-    #         else:
-    #             acc_loss = np.vstack((acc_loss, acc_loss_curr))
-
-    #         # aucs
-    #         # aucs_curr = np.vstack(np.array([prob, s, s]), r2)
-    #         aucs_curr = r2
-    #         if aucs is None:
-    #             aucs = aucs_curr
-    #         else:
-    #             aucs = np.vstack((aucs, aucs_curr))
-            
-    #         sums += np.hstack((acc_loss_curr, aucs_curr))
-
-    #         dir_name = copy_npy(i, s, prob)
-    #         np.savetxt(dir_name + 'accuracy_loss'+'.csv', acc_loss_curr, delimiter=',')
-
-
-              
-    #     print(f"[average loss, average accuracy, average AUC1, average AUC2] for dead prob of {prob} and {itr} iterations")
-    #     print(sums/itr)
-    #     if avg_metrics is None:
-    #         avg_metrics = sums / itr
-    #     else:
-    #         avg_metrics = np.vstack((avg_metrics, sums/itr))
-    
-    # print("avg metrics:", avg_metrics)
-    # # np.savetxt('avg_metrics.csv', avg_metrics, delimiter=',')
-    # date_time_str = datetime.today().strftime("%Y%m%d%H%M%S")
-    # np.savetxt(args.evaluationOutputDir + 'avg_metrics_' + date_time_str +'.csv', avg_metrics, delimiter=',')
-    # avg_metrics_percent = np.insert(avg_metrics, 0, np.array(probs), axis = 1)
-    # np.savetxt(args.evaluationOutputDir + 'avg_metrics_with_percent' + date_time_str +'.csv', avg_metrics_percent, delimiter=',')
-    
-    # np.savetxt(args.evaluationOutputDir + 'acc_loss_log_' + date_time_str +'.csv', acc_loss, delimiter=',')
-    # np.savetxt(args.evaluationOutputDir + 'auc_log_' + date_time_str +'.csv', aucs, delimiter=',')
-
 def multiAnalyses_helper(evalOutputDir=None, sort_by_percent=True):
     '''
     Helper function to retrieve directory names, seed values, iteration values, and percents for multi analyses.
     '''
     if evalOutputDir is None:
-        evalOutputDir = args.evaluationOutputDir
+        # evalOutputDir = args.evaluationOutputDir
+        evalOutputDir = settings.mlPath
     call = ['ls', evalOutputDir]
     res = subprocess.run(call ,capture_output=True, text=True)
     sd_names = re.findall(r'^(multiEval_seed.*)', res.stdout, re.MULTILINE)
@@ -731,8 +639,16 @@ if args.debug:
     print("debug")
     # some_exp('thoriba')
     settings = analysisUtils()
-    sorted_sd_names, _, _, sorted_percents = multiAnalyses_helper()
-    some_exp(settings, sub_dir_names=sorted_sd_names, percents=sorted_percents)
+    # sorted_sd_names, _, _, sorted_percents = multiAnalyses_helper()
+    # some_exp(settings, sub_dir_names=sorted_sd_names, percents=sorted_percents)
+
+    acc_summary = None
+    for prob in [0.0, 0.05, .1]:
+        for itr in range(10):
+            print(f'do something {itr}th iteration for prob = {prob}')
+            if prob == 0.0:
+                print(f'not conduct multi evalutions for prob = 0')
+                break
 
 if args.testParser:
     pass
@@ -747,11 +663,64 @@ if args.doAnalysis:
     if settings.doClassification:
         analyze_classification(settings)
     
+
 if args.doMultiAnalyses:
     settings = analysisUtils()
     if settings.doClassification:
         sorted_sd_names, _, _, sorted_percents = multiAnalyses_helper()
-        plot_superimposed_ROC(settings, sub_dir_names=sorted_sd_names, percents=sorted_percents)
+
+        # settings.mlPath = '/data/thoriba/t2k/eval/oct20_eMuPosPion_0dwallCut_flat_1/09052024-171021/'
+        # sorted_sd_names = [
+        #     'multiEval_seed_0_0th_itr_0_percent_20240530142420',
+
+        #     'multiEval_seed_0_0th_itr_3_percent_20240529134944',
+        #     'multiEval_seed_1_1th_itr_3_percent_20240529140157',
+        #     # 'multiEval_seed_2_2th_itr_3_percent_20240529141406',
+
+        #     'multiEval_seed_0_0th_itr_5_percent_20240529142605',
+        #     'multiEval_seed_1_1th_itr_5_percent_20240529143807',
+        #     # 'multiEval_seed_2_2th_itr_5_percent_20240529145014'
+        #     ]
+        # # sorted_percents = [0, 3, 3, 3, 5, 5, 5]
+        # sorted_percents = [0, 3, 3, 5, 5]
+        
+
+        print('Doing multiple analyses on classification model from results stored in: ', sorted_sd_names)
+        print('for the corresponding dead PMT rates:', sorted_percents)
+
+        # analyze_multiple_classification(settings, sorted_sd_names, sorted_percents, ['roc'])
+        # plot_simple_ROCs(settings, sorted_sd_names, sorted_percents)
+
+        amc = MultiRegressionAnalysis(settings=settings, sub_dir_names=sorted_sd_names, percents=sorted_percents)
+        # amc.analyze(tasks = ['roc'])
+
+        
+        print('auc summary', amc.plot_AUC_summary_stats())
+        # print('auc dict', amc.auc_dict)
+
+
+        
+        
+
+        # aucs = plot_superimposed_ROC(settings, sub_dir_names=sorted_sd_names, percents=sorted_percents)
+
+        # auc_summary = None
+        # # for p in sorted_percents:
+        # for p in range(0, 11):
+        #     aucs_group_by_p = aucs[aucs[:, 0] == p][:, 1]
+        #     # print(f'{p} percents ', aucs_group_by_p)
+        #     # print(f'{p} percents length', len(aucs_group_by_p))
+            
+        #     if aucs_group_by_p.size != 0:
+        #         # aucs_group_by_p  = aucs_group_by_p
+        #         auc_s_p = summary_stats_1d(aucs_group_by_p.tolist()) # has to be a list instead of numpy
+        #         auc_s_p = np.insert(auc_s_p, 0, p)
+        #         print(f"auc summary for {p} percents: ", auc_s_p)
+        #         auc_summary = np.vstack((auc_summary, auc_s_p)) if auc_summary is not None else auc_s_p
+                
+        # print('auc summary stats by percents!', auc_summary)
+
+
     else:
         print("MultiAnalyses is only supported for classificaiton at this moment")
 

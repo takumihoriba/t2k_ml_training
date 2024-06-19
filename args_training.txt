@@ -1,9 +1,9 @@
---doMultiEvaluations
+--doMultiAnalyses
 --numFolds=10
 --indicesInput=/data/fcormier/t2k/Public/oct20_eMuPosPion_0dwallCut_flat_1/combine_combine.hy
 --indicesOutputPath=/data/thoriba/t2k/indices/apr3_eMuPiPlus_1500MeV_small_1/
---evaluationInputDir=/data/fcormier/t2k/Public/regression_electrons_pos_jun3/22032024-142255/
---evaluationOutputDir=/data/fcormier/t2k/Public/regression_electrons_pos_jun3/22032024-142255/
+--evaluationInputDir=/data/thoriba/t2k/models/14042024-000620/
+--evaluationOutputDir=/data/thoriba/t2k/models/14042024-000620/
 --comparisonFolder=/fast_scratch/fcormier/t2k/ml/training/oct20_aferreira_combine_flatE/
 --plotInput=/fast_scratch/fcormier/t2k/ml/training/resnet_emu_weightDecay_sep13_test_1/
 --plotOutput=output/resnet_emu_weightDecay_sep13_test_1_2/
