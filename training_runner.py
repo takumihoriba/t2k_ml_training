@@ -21,7 +21,7 @@ import WatChMaL.analysis.utils.math as math
 
 from analyze_output.analyze_regression import analyze_regression
 from analyze_output.analyze_classification import analyze_classification, plot_superimposed_ROC, some_exp, plot_simple_ROCs
-from analyze_output.analyze_multiple_classification import MultiRegressionAnalysis
+from analyze_output.analyze_multiple_classification import MultiClassificationAnalysis
 
 from runner_util import utils, analysisUtils, train_config, make_split_file
 from WatChMaL.analysis.utils.binning import get_binning
@@ -691,11 +691,16 @@ if args.doMultiAnalyses:
         # analyze_multiple_classification(settings, sorted_sd_names, sorted_percents, ['roc'])
         # plot_simple_ROCs(settings, sorted_sd_names, sorted_percents)
 
-        amc = MultiRegressionAnalysis(settings=settings, sub_dir_names=sorted_sd_names, percents=sorted_percents)
-        # amc.analyze(tasks = ['roc'])
+        mca = MultiClassificationAnalysis(settings=settings, sub_dir_names=sorted_sd_names, percents=sorted_percents)
+        # mca.analyze(tasks = ['roc'])
 
+        # mca.analyze(tasks=['all'])
+        # mca.get_rejections(0.9)
+        mca.analyze(['all'])
         
-        print('auc summary', amc.plot_AUC_summary_stats())
+        
+        # print('auc summary', amc.plot_AUC_summary_stats())
+        # amc.plot_rejections_summary_stats()
         # print('auc dict', amc.auc_dict)
 
 
