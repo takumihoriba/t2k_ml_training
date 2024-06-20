@@ -56,7 +56,6 @@ class analysisResults():
             return 4
         elif "median" in value:
             return 3
-     
 
 def analyze_regression(settings):
 
@@ -216,4 +215,61 @@ def plot_reg_results(x, ml, ml_error, fitqun, fitqun_error, xlabel, ylabel, name
     plt.savefig(settings.outputPlotPath+'/'+name+'.png', bbox_inches='tight')
     plt.clf()
 
+def analyze_regression_no_plots(settings):
+
+    results = analysisResults(settings)
+
+    if settings.doML:
+        #vertex_axis_ml, quantile_lst_ml, quantile_error_lst_ml, median_lst_ml, median_error_lst_ml = analyze_ml_regression(settings)
+        print(settings.particleLabel)
+        print(settings.inputPath)
+        print(settings.fitqunPath)
+        print(settings.mlPath)
+        print(settings.target)
+        single_ml_analysis, multi_ml_analysis = analyze_ml_regression(settings) 
+        #print(f"SINGLE ANALYSIS: {single_ml_analysis}")
+        #print(f"MULTI ANALYSIS: {multi_ml_analysis}")
+        results.add_global_perf("ML", single_ml_analysis[0], single_ml_analysis[1], single_ml_analysis[2], single_ml_analysis[3], single_ml_analysis[4])
+        results.add_var_perf("ML",multi_ml_analysis)
+
+        print('added_global_perf\naxis\n', single_ml_analysis[0], '\nquantile\n', single_ml_analysis[1], '\nquantile(error)\n',single_ml_analysis[2], '\nmedian\n',single_ml_analysis[3], '\nmedian(error)\n',single_ml_analysis[4])
+        print('added_var_perf', multi_ml_analysis)
+
+    # if settings.doFiTQun:
+    #     #vertex_axis_fq, quantile_lst_fq, quantile_error_lst_fq, median_lst_fq, median_error_lst_fq = analyze_fitqun_regression(settings)
+    #     single_fq_analysis, multi_fq_analysis = analyze_fitqun_regression(settings) 
+    #     results.add_global_perf("fitqun", single_fq_analysis[0], single_fq_analysis[1], single_fq_analysis[2], single_fq_analysis[3], single_fq_analysis[4])
+    #     results.add_var_perf("fitqun",multi_fq_analysis)
+        #results.add_global_perf("fitqun", vertex_axis_fq, quantile_lst_fq, quantile_error_lst_fq, median_lst_fq, median_error_lst_fq)
+
+
+    #print(f"Quantile: {results.get_var_perf('ML', variable='ve', axis='Angle', value='quantile')}")
+    #print(f"Median: {results.get_var_perf('ML', variable='ve', axis='Angle', value='median')}")
+
+    
+    #print(results.get_global_perf("fitqun", axis="Angle", value="quantile"))
+    #print(results.get_global_perf("ML", axis="Angle", value="quantile"))
+
+
+    # if "positions" in settings.target:
+    #     print(f"Positions; ML; Global")
+    #     print(f"Resolution {results.get_global_perf('ML', axis='Global', value='quantile')} ({results.get_global_perf('ML', axis='Global', value='quantile error')})")
+    #     print(f"Bias {results.get_global_perf('ML', axis='Global', value='median')} ({results.get_global_perf('ML', axis='Global', value='median error')})")
+    #     print(f"Directions; fiTQun; Global")
+    #     print(f"Resolution {results.get_global_perf('fitqun', axis='Global', value='quantile')} ({results.get_global_perf('fitqun', axis='Global', value='quantile error')})")
+    #     print(f"Bias {results.get_global_perf('fitqun', axis='Global', value='median')} ({results.get_global_perf('fitqun', axis='Global', value='median error')})")
+
+    #     print(f"Positions; ML; Transverse")
+    #     print(f"Resolution {results.get_global_perf('ML', axis='Transverse', value='quantile')} ({results.get_global_perf('ML', axis='Transverse', value='quantile error')})")
+    #     print(f"Bias {results.get_global_perf('ML', axis='Transverse', value='median')} ({results.get_global_perf('ML', axis='Transverse', value='median error')})")
+    #     print(f"Directions; fiTQun; Transverse")
+    #     print(f"Resolution {results.get_global_perf('fitqun', axis='Transverse', value='quantile')} ({results.get_global_perf('fitqun', axis='Transverse', value='quantile error')})")
+    #     print(f"Bias {results.get_global_perf('fitqun', axis='Transverse', value='median')} ({results.get_global_perf('fitqun', axis='Transverse', value='median error')})")
+
+    #     print(f"Positions; ML; Longitudinal")
+    #     print(f"Resolution {results.get_global_perf('ML', axis='Longitudinal', value='quantile')} ({results.get_global_perf('ML', axis='Longitudinal', value='quantile error')})")
+    #     print(f"Bias {results.get_global_perf('ML', axis='Longitudinal', value='median')} ({results.get_global_perf('ML', axis='Longitudinal', value='median error')})")
+    #     print(f"Directions; fiTQun; Longitudinal")
+    #     print(f"Resolution {results.get_global_perf('fitqun', axis='Longitudinal', value='quantile')} ({results.get_global_perf('fitqun', axis='Longitudinal', value='quantile error')})")
+    #     print(f"Bias {results.get_global_perf('fitqun', axis='Longitudinal', value='median')} ({results.get_global_perf('fitqun', axis='Longitudinal', value='median error')})")
     

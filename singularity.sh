@@ -1,0 +1,1 @@
+singularity run -B /fast_scratch/ -B /fast_scratch_1/ -B /fast_scratch_2/ -B /data/ /fast_scratch/triumfmlutils/containers/watchmal_recommended.simg
