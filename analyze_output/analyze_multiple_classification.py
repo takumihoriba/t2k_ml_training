@@ -189,8 +189,11 @@ class MultiClassificationAnalysis:
         for p in list(set(percents)):
             roc_curves_dict[p] = []
             auc_dict[p] = []
+        
 
         for i, sub_dir in enumerate(sub_dirs):
+            print('----------------------------------')
+            print(f'Processing {i}th (of {len(sub_dirs)}) evaluation')
             roc_curves = []
 
             eval_output_path = base_path + sub_dir
@@ -201,6 +204,7 @@ class MultiClassificationAnalysis:
             
             labels_test = np.array(np.load(str(eval_output_path) + "/labels.npy"))
 
+            # here I can be more efficient by moving this outside the loop since we expect that hy is same for all evaluation
             # grab relevent parameters from hy file and only keep the values corresponding to those in the test set
             hy = h5py.File(settings.inputPath + "/combine_combine.hy", "r")
             print(hy["labels"].shape)
@@ -242,11 +246,12 @@ class MultiClassificationAnalysis:
             # basic_cuts = ((hy_electrons | hy_muons) & nhit_cut & towall_cut)
             # basic_cuts = (nhit_cut & towall_cut)
 
-            signal_cut = labels == self.signal_label[0]
-            bckgrd_cut = labels == self.background_labels[0]
+            signal_cut = np.isin(labels, self.signal_label)
+            bckgrd_cut = np.isin(labels, self.background_labels)
+
             basic_cuts = (signal_cut | bckgrd_cut) & nhit_cut & towall_cut
 
-            print(f'Recall that Signal is {self.signal_label_desc}, Background is {self.background_labels_desc}')
+            print(f'Signal = {self.signal_label_desc}; Background = {self.background_labels_desc}')
             print(f"""signal_cut (previously hy_electrons): {signal_cut.shape}, bckgrd_cut (previsouly hy_muons): {bckgrd_cut.shape}, nhit_cut: {nhit_cut.shape}, towall_cut: {towall_cut.shape}""")
 
             # create watchmal classification object to be used as runs for plotting the efficiency relative to event angle  
