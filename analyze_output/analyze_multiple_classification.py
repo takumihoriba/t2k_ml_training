@@ -235,7 +235,7 @@ class MultiClassificationAnalysis:
             ml_cheThr = list(map(get_cherenkov_threshold, labels))
 
 
-            # Recall 0, 1, 3 corresponds 'Muon', 'Electron', 'Pion'
+            # 0, 1, 2 corresponds 'Muon', 'Electron', 'Pion'
             # apply cuts, as of right now it should remove any events with zero pmt hits (no veto cut)
             nhit_cut = nhits > 0 #25
             towall_cut = towall > 100
@@ -358,60 +358,205 @@ class MultiClassificationAnalysis:
         fig.savefig(self.settings.outputPlotPath + f'{self.roc_desc}_auc_summary_plot_{self.plot_counter}.png')
         self.plot_counter += 1
         
-    def get_rejection_for_efficiency(self, eff, roc_curve):
-        '''
-        Returns the rejection for a given efficiency
-        eff: float
-            the efficiency
-        roc_curve: tuple of np arrays
-            the ROC curve
-        '''
-        fpr, tpr = roc_curve
-        with np.errstate(divide='ignore'):
-            return 1 / fpr[np.argmin(np.abs(tpr - eff))]
+    # def get_rejection_for_efficiency(self, eff, roc_curve):
+    #     '''
+    #     Returns the rejection for a given efficiency
+    #     eff: float
+    #         the efficiency
+    #     roc_curve: tuple of np arrays
+    #         the ROC curve
+    #     '''
+    #     fpr, tpr = roc_curve
+    #     with np.errstate(divide='ignore'):
+    #         return 1 / fpr[np.argmin(np.abs(tpr - eff))]
     
-    def get_rejections(self, eff=.9):
+    # def get_rejections(self, eff=.9):
+    #     if self.computed == False:
+    #         self.compute_mean_ROCs()
+        
+    #     rejections_by_rate = {}
+        
+    #     for p in list(set(self.percents)):
+    #         rejs = []
+    #         for i in range(len(self.roc_curves_dict[p])):
+    #             fpr, tpr = self.roc_curves_dict[p][i]
+    #             with np.errstate(divide='ignore'):
+    #                 rej = 1 / fpr[np.argmin(np.abs(tpr - eff))]
+    #             rejs.append(rej)
+
+    #         rejections_by_rate[p] = rejs
+        
+    #     print("rejection_by_rate", rejections_by_rate)
+        
+    #     return rejections_by_rate
+
+    # def plot_rejections_summary_stats(self, eff=0.9, file=None):
+    #     dict = self.get_rejections(eff)
+    #     df = pd.DataFrame([(k, v) for k, vals in dict.items() for v in vals], columns=['rate', 'rejection'])
+
+    #     mean = df.groupby('rate').mean()
+    #     sem = df.groupby('rate').sem(ddof=0)
+
+
+    #     # df = pd.DataFrame(self.get_rejections(eff))
+    #     fig, ax = plt.subplots()
+    #     # df.columns = df.columns.astype(float)
+    #     # df = df.reindex(sorted(df.columns), axis=1)
+    #     # mean = df.mean()
+    #     # # divided by sqrt(n) instead of sqrt(n-1)
+    #     # sem = df.sem(ddof=0)
+    #     # ax.errorbar(mean.index, mean, yerr=sem, fmt='o')
+    #     ax.errorbar(mean.index, mean['rejection'], yerr=sem['rejection'], fmt='o')
+    #     ax.set_xlabel('Dead PMT Rate (%)')
+    #     ax.set_ylabel('Mean Rejection (1 / FPR)')
+    #     ax.set_title(f'Mean Rejection with Standard Error at {round(eff*100)}% Efficiency by Dead PMT Rate')
+    #     ax.grid(True, linestyle='--', linewidth=0.5)
+    #     fig.savefig(self.settings.outputPlotPath + f'/{self.roc_desc}_rejection_at_{round(eff*100)}%_{self.plot_counter}.png', format='png')
+    #     self.plot_counter += 1
+    
+
+    # def get_efficiencies(self, rejc=1000):
+    #     if self.computed == False:
+    #         self.compute_mean_ROCs()
+        
+    #     efficiencies_by_rate = {}
+        
+    #     for p in list(set(self.percents)):
+    #         effs = []
+    #         for i in range(len(self.roc_curves_dict[p])):
+    #             fpr, tpr = self.roc_curves_dict[p][i]
+    #             with np.errstate(divide='ignore'):
+    #                 # find closest tpr to rejection rate
+    #                 eff = tpr[np.argmin(np.abs(1/fpr- rejc))]
+    #             effs.append(eff)
+
+    #         efficiencies_by_rate[p] = effs
+        
+    #     print("efficiency_by_rate", efficiencies_by_rate)
+
+    #     df = pd.DataFrame([(k, v) for k, vals in efficiencies_by_rate.items() for v in vals], columns=['rate', 'eff'])
+    #     df.to_csv(self.settings.outputPlotPath + f'/{self.roc_desc}_eff_at_{round(rejc)}.csv')
+        
+    #     return efficiencies_by_rate
+
+    # def plot_efficiencies_summary_stats(self, eff=1000, file=None):
+    #     dict = self.get_efficiencies(eff)
+    #     df = pd.DataFrame([(k, v) for k, vals in dict.items() for v in vals], columns=['rate', 'rejection'])
+
+    #     mean = df.groupby('rate').mean()
+    #     sem = df.groupby('rate').sem(ddof=0)
+
+
+    #     # df = pd.DataFrame(self.get_rejections(eff))
+    #     fig, ax = plt.subplots()
+    #     # df.columns = df.columns.astype(float)
+    #     # df = df.reindex(sorted(df.columns), axis=1)
+    #     # mean = df.mean()
+    #     # # divided by sqrt(n) instead of sqrt(n-1)
+    #     # sem = df.sem(ddof=0)
+    #     # ax.errorbar(mean.index, mean, yerr=sem, fmt='o')
+    #     ax.errorbar(mean.index, mean['rejection'], yerr=sem['rejection'], fmt='o')
+    #     ax.set_xlabel('Dead PMT Rate (%)')
+    #     ax.set_ylabel('Mean Efficiency ')
+    #     ax.set_title(f'Mean Efficiency with Standard Error when Rejection = {eff}')
+    #     ax.grid(True, linestyle='--', linewidth=0.5)
+    #     fig.savefig(self.settings.outputPlotPath + f'/{self.roc_desc}_eff_at_{round(eff)}%_{self.plot_counter}.png', format='png')
+    #     self.plot_counter += 1
+
+    def get_slices(self, intercept=1000, get_eff_from_rej=True):
+        '''
+        when get_eff_from_rej=True, intercept is rejection. Reasonable rejection is 100 or 1000 or more
+        when get_eff_from_rej=True, intercept is efficiency. Reasonable intercept value is .9, .95 or more
+        '''
         if self.computed == False:
             self.compute_mean_ROCs()
+
+        # if get_eff_from_rej==True (== 1), then we return efficiency values
+        # if get_eff_from_rej==False (== 0), we are returning rejection values
+        return_value_names = ['rejection', 'efficiency'] 
         
-        rejections_by_rate = {}
+        slices_by_rate = {}
         
         for p in list(set(self.percents)):
-            rejs = []
+            slices = []
             for i in range(len(self.roc_curves_dict[p])):
                 fpr, tpr = self.roc_curves_dict[p][i]
-                with np.errstate(divide='ignore'):
-                    rej = 1 / fpr[np.argmin(np.abs(tpr - eff))]
-                rejs.append(rej)
+                if get_eff_from_rej:
+                    with np.errstate(divide='ignore'):
+                        # find closest tpr to rejection rate
+                        eff = tpr[np.argmin(np.abs(1/fpr- intercept))]
+                    slices.append(eff)
+                else:
+                    with np.errstate(divide='ignore'):
+                        rej = 1 / fpr[np.argmin(np.abs(tpr - intercept))]
+                    slices.append(rej)
 
-            rejections_by_rate[p] = rejs
-        
-        print("rejection_by_rate", rejections_by_rate)
-        
-        return rejections_by_rate
+            slices_by_rate[p] = slices
 
-    def plot_rejections_summary_stats(self, eff=0.9):
-        dict = self.get_rejections(eff)
-        df = pd.DataFrame([(k, v) for k, vals in dict.items() for v in vals], columns=['rate', 'rejection'])
+        
+        print(f"{return_value_names[get_eff_from_rej]}_by_rate", slices_by_rate)
+
+        intercept_fmt = str(round(intercept*100)) + '%' if not get_eff_from_rej else str(intercept)
+
+        df = pd.DataFrame([(k, v) for k, vals in slices_by_rate.items() for v in vals], columns=['rate', 'eff'])
+        df.to_csv(self.settings.outputPlotPath + f'/{self.roc_desc}_{return_value_names[get_eff_from_rej]}_when_{return_value_names[not get_eff_from_rej]}_is_{intercept_fmt}.csv')
+        
+        return slices_by_rate
+
+    def plot_slice_ROC(self, intercept=1000, get_eff_from_rej=True, file=None):
+
+        dict = self.get_slices(intercept, get_eff_from_rej)
+
+        to_value_name = 'efficiency' if get_eff_from_rej else 'rejection'
+        from_value_name = 'efficiency' if not get_eff_from_rej else 'rejection'
+
+        df = pd.DataFrame([(k, v) for k, vals in dict.items() for v in vals], columns=['rate', to_value_name])
 
         mean = df.groupby('rate').mean()
         sem = df.groupby('rate').sem(ddof=0)
 
-
-        # df = pd.DataFrame(self.get_rejections(eff))
         fig, ax = plt.subplots()
-        # df.columns = df.columns.astype(float)
-        # df = df.reindex(sorted(df.columns), axis=1)
-        # mean = df.mean()
-        # # divided by sqrt(n) instead of sqrt(n-1)
-        # sem = df.sem(ddof=0)
-        # ax.errorbar(mean.index, mean, yerr=sem, fmt='o')
-        ax.errorbar(mean.index, mean['rejection'], yerr=sem['rejection'], fmt='o')
+
+        ax.errorbar(mean.index, mean[to_value_name], yerr=sem[to_value_name], fmt='o')
         ax.set_xlabel('Dead PMT Rate (%)')
-        ax.set_ylabel('Mean Rejection (1 / FPR)')
-        ax.set_title(f'Mean Rejection with Standard Error at {round(eff*100)}% Efficiency by Dead PMT Rate')
+        ax.set_ylabel(f"Mean {to_value_name[0].capitalize() + to_value_name[1:]}")
+        intercept_fmt = str(round(intercept*100)) + '%' if not get_eff_from_rej else str(intercept)
+        if get_eff_from_rej:
+            ax.set_title(f'Mean Efficiency with Standard Error when Rejection = {intercept_fmt}')
+        else:
+            ax.set_title(f'Mean Rejection with Standard Error at {intercept_fmt} Efficiency')
         ax.grid(True, linestyle='--', linewidth=0.5)
-        fig.savefig(self.settings.outputPlotPath + f'/{self.roc_desc}_rejection_at_{round(eff*100)}%_{self.plot_counter}.png', format='png')
+        fig.savefig(self.settings.outputPlotPath + f'/{self.roc_desc}_{to_value_name}_when_{from_value_name}_is_{intercept_fmt}_{self.plot_counter}.png', format='png')
+        self.plot_counter += 1
+
+    def plot_slice_ROC_combined(self, intercepts=[10000, 5000, 1000], get_eff_from_rej=True, file=None):
+        # set things up
+        to_value_name = 'efficiency' if get_eff_from_rej else 'rejection'
+        from_value_name = 'efficiency' if not get_eff_from_rej else 'rejection'
+        
+
+        fig, ax = plt.subplots()
+
+        for intercept in intercepts:
+            dict = self.get_slices(intercept, get_eff_from_rej)
+            df = pd.DataFrame([(k, v) for k, vals in dict.items() for v in vals], columns=['rate', to_value_name])
+            mean = df.groupby('rate').mean()
+            sem = df.groupby('rate').sem(ddof=0)
+            intercept_fmt = str(round(intercept*100)) + '%' if not get_eff_from_rej else str(intercept)
+            ax.errorbar(mean.index, mean[to_value_name], yerr=sem[to_value_name], fmt='o', 
+                        label=f'{from_value_name[0].capitalize()+from_value_name[1:]} = {intercept_fmt}',
+                        capsize=4, markersize=4)
+
+        ax.set_xlabel('Dead PMT Rate [%]')
+        ax.set_ylabel(f"Mean {to_value_name[0].capitalize() + to_value_name[1:]}")
+        ax.legend()
+        roc_desc_fmt = self.roc_desc.replace('_', ' ')
+        if get_eff_from_rej:
+            ax.set_title(f'{roc_desc_fmt} Mean Efficiency with SE at Different Rejection Values')
+        else:
+            ax.set_title(f'{roc_desc_fmt} Mean Rejection with SE at Different Efficiency Values')
+        ax.grid(True, linestyle='--', linewidth=0.5)
+        fig.savefig(self.settings.outputPlotPath + f'/{self.roc_desc}_{to_value_name}_at_diff_{from_value_name}_{self.plot_counter}.png', format='png')
         self.plot_counter += 1
 
     def generate_random_color(self, seed=42):

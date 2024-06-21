@@ -692,11 +692,26 @@ if args.doMultiAnalyses:
         # plot_simple_ROCs(settings, sorted_sd_names, sorted_percents)
 
         mca = MultiClassificationAnalysis(settings=settings, sub_dir_names=sorted_sd_names, percents=sorted_percents)
+        # mca = MultiClassificationAnalysis(settings=settings, sub_dir_names=sorted_sd_names[:8], percents=sorted_percents[:8])
         # mca.analyze(tasks = ['roc'])
 
         # mca.analyze(tasks=['all'])
         # mca.get_rejections(0.9)
-        mca.analyze(['all'])
+        # mca.analyze(['all'])
+        # mca.plot_efficiencies_summary_stats(1000)
+        # mca.plot_slice_ROC(intercept=100, get_eff_from_rej=True)
+        # mca.plot_slice_ROC(intercept=1000, get_eff_from_rej=True)
+        # mca.plot_slice_ROC(intercept=5000, get_eff_from_rej=True)
+        # mca.plot_slice_ROC(intercept=10000, get_eff_from_rej=True)
+
+        # mca.plot_slice_ROC(intercept=.85, get_eff_from_rej=False)
+        # mca.plot_slice_ROC(intercept=.9, get_eff_from_rej=False)
+        # mca.plot_slice_ROC(intercept=.88, get_eff_from_rej=False)
+        # mca.plot_slice_ROC(intercept=.92, get_eff_from_rej=False)
+        # mca.plot_slice_ROC_combined(intercepts=[1000, 5000, 10000], get_eff_from_rej=True)
+        
+        
+        # mca.plot_slice_ROC_combined(intercepts=[.88, .9, .92], get_eff_from_rej=False)
         
         
         # print('auc summary', amc.plot_AUC_summary_stats())
