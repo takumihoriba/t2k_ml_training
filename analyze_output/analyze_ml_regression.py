@@ -136,7 +136,7 @@ def analyze_ml_regression(settings):
      return single_analysis, multi_analysis 
 
 
-def analyze_energy_long(settings, feature_name='energy', v_axis='Longitudinal'):
+def save_residual_plot(settings, feature_name='energy', v_axis='Longitudinal'):
 
      #First argument is where to save plot
      #Second one where to get data

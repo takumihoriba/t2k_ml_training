@@ -752,19 +752,19 @@ def compute_residuals(from_path=True, dirpath='outputs', combine=True, true=None
              # debug
             #  plt.savefig(f"/data/thoriba/t2k/plots/plots_regression_test4/pred_{target}_{vertex_axis[i]}_{extra_string}.png")
 
-             residual_lst.append(residuals)
-             residual_lst_wcut.append(residuals_cut)
+            #  residual_lst.append(residuals)
+            #  residual_lst_wcut.append(residuals_cut)
 
-             quantile_lst.append(quantile)
-             quantile_error_lst.append(quantile_error)
-             median_lst.append(numerical_median)
-             median_error_lst.append(median_error)
-             plt.clf()
+            #  quantile_lst.append(quantile)
+            #  quantile_error_lst.append(quantile_error)
+            #  median_lst.append(numerical_median)
+            #  median_error_lst.append(median_error)
+            #  plt.clf()
 
-             if vertex_axis[i] == 'Longitudinal':
-                 print('long residual shape', np.array(residuals).shape)
-                 print('long residual head', np.array(residuals)[:20])
-                 return residuals
+            #  if vertex_axis[i] == 'Longitudinal':
+            #      print('long residual shape', np.array(residuals).shape)
+            #      print('long residual head', np.array(residuals)[:20])
+            #      return residuals
      print(f'Could not compute {vertex_axis}. Returning None')
      return None
     #  if False and combine:

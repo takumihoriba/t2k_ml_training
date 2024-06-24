@@ -1,5 +1,5 @@
 # implement later
-from analyze_output.analyze_ml_regression import analyze_ml_regression, analyze_energy_long
+from analyze_output.analyze_ml_regression import analyze_ml_regression, save_residual_plot #, analyze_energy_long
 from analyze_output.analyze_regression import analysisResults
 
 import numpy as np
@@ -72,7 +72,8 @@ class MultiRegressionAnalysis:
             settings.mlPath = BASE_PATH + sub_dir + '/'
             print('mlPath', settings.mlPath)
             # single_ml_analysis, multi_ml_analysis = analyze_ml_regression(settings) 
-            analyze_energy_long(settings, feature_name, v_axis)
+            # analyze_energy_long(settings, feature_name, v_axis)
+            save_residual_plot(settings, feature_name, v_axis)
 
 
     def compute_bias_summary_stats(self):
