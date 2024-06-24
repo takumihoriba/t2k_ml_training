@@ -461,8 +461,6 @@ def compute_residuals(from_path=True, dirpath='outputs', combine=True, true=None
      '''
      plt.style.use('ggplot')
 
-    #  print('hello')
-
 
      if from_path: 
         print('from_path not supported')
@@ -559,6 +557,10 @@ def compute_residuals(from_path=True, dirpath='outputs', combine=True, true=None
              pred = np.hstack((pred, np.reshape(np.zeros(temp_true.shape), (pred.shape[0], 1))))
 
          if not combine: 
+             print('not combine not supported')
+             combine = True
+             break
+         
              labels = "muon", "electron"
 
              true_target = {}
@@ -634,33 +636,7 @@ def compute_residuals(from_path=True, dirpath='outputs', combine=True, true=None
                  plt.ylabel('count')
                  plt.yscale('log')
                  plt.show()
-
          else:
-
-            #  plt.figure(figsize=(5,5))
-            #  if len(vertex_axis) == 1:
-            #     plt.scatter(true[:], pred[:], alpha=0.05, s=0.1, color=color)
-            #  else:
-            #     plt.scatter(true[:,i], pred[:,i], alpha=0.05, s=0.1, color=color)
-            #  plt.plot(line, line, '--', color='black', alpha=0.5)
-            #  if "positions"in target and "Global" in vertex_axis[i]:
-            #     plt.xlim(0,500) 
-            #  elif "directions"in target and "Angle" in vertex_axis[i]:
-            #     plt.xlim(0,15) 
-            #  else:
-            #     plt.xlim(-xlimit,xlimit) 
-            #     plt.ylim(-ylimit,ylimit)
-
-            #  plt.title(f'Event Vertex for {vertex_axis[i]} Axis')
-            #  unit = '[cm]'
-            #  if "directions" in target:
-            #      unit=''
-            #  if "momentum" in target or "momenta" in target:
-            #      unit='[MeV]'
-            #  plt.xlabel('True ' + target + ' ' + unit)
-            #  plt.ylabel('Predicted ' + target + ' ' + unit)
-            #  #plt.show()
-            #  plt.clf()
              if len(vertex_axis) == 1:
                 residuals = (true - pred)/true
              elif "Global" in vertex_axis[i] and "positions" in target:
@@ -676,40 +652,40 @@ def compute_residuals(from_path=True, dirpath='outputs', combine=True, true=None
                  return residuals
              
 
-             cut = 500
-             if "momentum" in target or "energies" in target or "momenta" in target:
-                 cut = 10
-             residuals_cut = [] 
-             for r in range(len(residuals)):
-                 if -cut < residuals[r] <  cut:
-                     residuals_cut.append(residuals[r])
+            #  cut = 500
+            #  if "momentum" in target or "energies" in target or "momenta" in target:
+            #      cut = 10
+            #  residuals_cut = [] 
+            #  for r in range(len(residuals)):
+            #      if -cut < residuals[r] <  cut:
+            #          residuals_cut.append(residuals[r])
             
             #  print('heres your residuals', residuals)
                      
              #numerical_std = np.std(residuals_cut) 
              #Is actually median
-             numerical_median = np.median(residuals_cut) 
-             #Compute mean for error
-             mean_error = np.std(residuals_cut)/np.sqrt(len(residuals_cut))
-             mean_to_median = np.sqrt(3.14*((2.*float(len(residuals_cut))+1.)/(4.*(len(residuals_cut)))))
-             median_error = mean_error * mean_to_median
-             if ("positions"in target and "Global" in vertex_axis[i]) or ("directions" in target and "Angle" in vertex_axis[i]):
-                 quantile = np.quantile(residuals_cut,0.68)
-                 quantile_error = mquantiles_cimj(residuals_cut, prob=0.68)
-                 #quantile_error = (quantile-np.ravel(quantile_error)[0], np.ravel(quantile_error)[1]-quantile)
-             else:
-                (numerical_bot_quantile, numerical_top_quantile) = np.quantile(residuals_cut, [0.159,0.841])
-                #numerical_top_quantile = np.quantile(residuals_cut, 0.841)
-                #quantile = (np.abs((numerical_median-numerical_bot_quantile))+np.abs((numerical_median-numerical_top_quantile)))/2
-                quantile = np.quantile(np.abs(residuals_cut),0.68)
-                quantile_error = mquantiles_cimj(np.abs(residuals_cut), prob=[0.68])
-                #quantile_error = (((quantile_error[1][0] - quantile_error[0][0])/2),((quantile_error[1][1] - quantile_error[0][1])/2))
-             quantile_error = float((quantile_error[1]-quantile_error[0])/2.)
+            #  numerical_median = np.median(residuals_cut) 
+            #  #Compute mean for error
+            #  mean_error = np.std(residuals_cut)/np.sqrt(len(residuals_cut))
+            #  mean_to_median = np.sqrt(3.14*((2.*float(len(residuals_cut))+1.)/(4.*(len(residuals_cut)))))
+            #  median_error = mean_error * mean_to_median
+            #  if ("positions"in target and "Global" in vertex_axis[i]) or ("directions" in target and "Angle" in vertex_axis[i]):
+            #      quantile = np.quantile(residuals_cut,0.68)
+            #      quantile_error = mquantiles_cimj(residuals_cut, prob=0.68)
+            #      #quantile_error = (quantile-np.ravel(quantile_error)[0], np.ravel(quantile_error)[1]-quantile)
+            #  else:
+            #     (numerical_bot_quantile, numerical_top_quantile) = np.quantile(residuals_cut, [0.159,0.841])
+            #     #numerical_top_quantile = np.quantile(residuals_cut, 0.841)
+            #     #quantile = (np.abs((numerical_median-numerical_bot_quantile))+np.abs((numerical_median-numerical_top_quantile)))/2
+            #     quantile = np.quantile(np.abs(residuals_cut),0.68)
+            #     quantile_error = mquantiles_cimj(np.abs(residuals_cut), prob=[0.68])
+            #     #quantile_error = (((quantile_error[1][0] - quantile_error[0][0])/2),((quantile_error[1][1] - quantile_error[0][1])/2))
+            #  quantile_error = float((quantile_error[1]-quantile_error[0])/2.)
 
-             yhist, xhist, _ = plt.hist(residuals_cut, bins=100, alpha=0.7, color=color, range=[-xlimit, xlimit])
-             p0 = [40, 0, 70] 
-             if "directions" in target or "momentum" in target or "energies" in target or "momenta" in target:
-                 p0 = [40, 0, 0.03]
+            #  yhist, xhist, _ = plt.hist(residuals_cut, bins=100, alpha=0.7, color=color, range=[-xlimit, xlimit])
+            #  p0 = [40, 0, 70] 
+            #  if "directions" in target or "momentum" in target or "energies" in target or "momenta" in target:
+            #      p0 = [40, 0, 0.03]
              '''
              popt, pcov = curve_fit(gaussian, (xhist[1:]+xhist[:-1])/2, yhist, bounds=(-np.inf, np.inf), p0=p0)    
              perr = np.sqrt(np.diag(pcov))
@@ -721,9 +697,9 @@ def compute_residuals(from_path=True, dirpath='outputs', combine=True, true=None
 
              #plt.plot(line, gaussian(line, *popt), alpha=1, color='black', label='guassian fit')
 
-             dec_to_round = 2
-             if "directions" in target or "energies" in target or "momentum" in target or "momenta":
-                 dec_to_round = 5
+            #  dec_to_round = 2
+            #  if "directions" in target or "energies" in target or "momentum" in target or "momenta":
+            #      dec_to_round = 5
              # round numbers
 
             #  if "momenta" in target or "momentum" in target:
