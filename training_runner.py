@@ -258,7 +258,7 @@ if args.testParser:
     settings = analysisUtils()
     settings.set_output_directory()
         
-    # sub_dir_names, _, _, percents = multiAnalyses_helper(args.evaluationOutputDir)
+    sub_dir_names, _, _, percents = multiAnalyses_helper(args.evaluationOutputDir)
 
     # settings.doRegression = True
     # settings.mlPath = '/data/thoriba/t2k/eval/oct20_eMuPosPion_0dwallCut_flat_1/09052024-171021_regress/22032024-142255/'
@@ -269,23 +269,34 @@ if args.testParser:
 
         print('regress')
 
-        sub_dir_names = [
-            # 'multiEval_seed_0_0th_itr_0_percent_20240607172604',
-            'multiEval_seed_0_0th_itr_10_percent_20240608021345',
-            'multiEval_seed_0_0th_itr_3_percent_20240607174304',
-            # 'multiEval_seed_0_0th_itr_5_percent_20240607215813',
-            'multiEval_seed_10_10th_itr_10_percent_20240608050420',
-            'multiEval_seed_10_10th_itr_3_percent_20240607203305',
-            # 'multiEval_seed_10_10th_itr_5_percent_20240608004832'
-        ]
+        # sub_dir_names = [
+        #     # 'multiEval_seed_0_0th_itr_0_percent_20240607172604',
+        #     'multiEval_seed_0_0th_itr_10_percent_20240608021345',
+        #     'multiEval_seed_0_0th_itr_3_percent_20240607174304',
+        #     # 'multiEval_seed_0_0th_itr_5_percent_20240607215813',
+        #     'multiEval_seed_10_10th_itr_10_percent_20240608050420',
+        #     # 'multiEval_seed_10_10th_itr_3_percent_20240607203305',
+        #     # 'multiEval_seed_10_10th_itr_5_percent_20240608004832'
+        # ]
 
-        percents = [10, 3, 10, 3]
+        # percents = [10, 3, 10]
         
-        analyze_multiple_regression(settings, sub_dir_names, percents)
+        # analyze_multiple_regression(settings, sub_dir_names, percents)
+        # mra = MultiRegressionAnalysis(settings=settings, sub_dir_names=sub_dir_names, percents=percents)
+        mra = MultiRegressionAnalysis(settings=settings, sub_dir_names=sub_dir_names[:1], percents=percents[:1])
+        
+        # mra.plot_errorbars(file_path=settings.outputPlotPath + 'reg_analysis_metrics.csv')
+        # mra.compute_bias_summary_stats()
+        mra.plot_resdiual_scatter('energy', 'Longitudinal')
+        # mra.plot_resdiual_scatter('visible energy', 'Longitudinal')
+        # mra.plot_resdiual_scatter('nhit', 'Longitudinal')
+        # mra.plot_resdiual_scatter('towall', 'Longitudinal')
+        # mra.plot_resdiual_scatter('total_charge', 'Longitudinal')
+
 
         # mra = MultiRegressionAnalysis(settings=settings, sub_dir_names=sub_dir_names, percents=percents)
 
-        # mra.plot_errorbars()
+        # mra.plot_errorbars(file_path='')
 
 
     if settings.doClassification:
@@ -310,22 +321,7 @@ if args.doMultiAnalyses:
     sub_dir_names, _, _, percents = multiAnalyses_helper(args.evaluationOutputDir)
 
     if settings.doRegression:
-        
-        
-        # because we always compute plots, each analysis takes about 30 sec to 1 min.
-        # sub_dir_names = [
-        #     # 'multiEval_seed_0_0th_itr_0_percent_20240607172604',
-        #     # 'multiEval_seed_7_7th_itr_3_percent_20240607194200',
-        #     # 'multiEval_seed_8_8th_itr_3_percent_20240607195902',
-        #     'multiEval_seed_9_9th_itr_3_percent_20240607201603',
-        #     # 'multiEval_seed_10_10th_itr_5_percent_20240608004832',
-        #     'multiEval_seed_12_12th_itr_5_percent_20240608012237'
-        # ]
-
-        # percents = [3, 5]
-        # # percents = [0, 3, 3, 3, 5, 5]
-        
-        analyze_multiple_regression(settings, sub_dir_names, percents)
+        analyze_multiple_regression(settings, sub_dir_names[0], percents[0])
 
     if settings.doClassification:
         pass

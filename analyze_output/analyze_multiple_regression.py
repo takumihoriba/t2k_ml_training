@@ -1,5 +1,5 @@
 # implement later
-from analyze_output.analyze_ml_regression import analyze_ml_regression
+from analyze_output.analyze_ml_regression import analyze_ml_regression, analyze_energy_long
 from analyze_output.analyze_regression import analysisResults
 
 import numpy as np
@@ -34,6 +34,45 @@ class MultiRegressionAnalysis:
     def analyze(self, tasks=['all']):
         self.compute_bias_summary_stats()
         self.plot_errorbars()
+
+    def plot_resdiual_scatter(self, feature_name='energy', v_axis='Longitudinal'):
+        """
+        Plots a scatter plot of residuals versus a specified feature, and saves it in outputPlotPath specified in analysis_config.ini
+
+        This method generates a scatter plot where the x-axis represents the values of the specified feature from the dataset,
+        and the y-axis represents the residuals (the differences between the actual values and the predicted values) with respect to axis specified in `v_axis`. 
+
+        Parameters:
+        -----------
+        feature_name : str
+            The name of the feature (column) in the dataset for which the residual scatter plot will be generated.
+            It must be one of ['energy', 'visible energy', 'towall', 'total_charge', 'nhit']
+        v_axis : str
+            The name of the column that represents the residuals in the dataset. 
+
+        Returns:
+        --------
+        None
+            This method does not return any value. It directly generates and displays the scatter plot.
+        """
+        settings = self.settings
+        percents = self.percents
+        sub_dir_names = self.sub_dirs
+
+        BASE_PATH = settings.mlPath
+        # df = pd.DataFrame(columns=['dead PMT rate', 'var', 'quantile', 'quantile error', 'median', 'median error'])
+
+        for i, sub_dir in enumerate(sub_dir_names):
+            print('BASE_PATH', BASE_PATH)
+            print('particleLabel', settings.particleLabel)
+            print('inputPath', settings.inputPath)
+            print('fitqunPath', settings.fitqunPath)
+
+            print('target', settings.target)
+            settings.mlPath = BASE_PATH + sub_dir + '/'
+            print('mlPath', settings.mlPath)
+            # single_ml_analysis, multi_ml_analysis = analyze_ml_regression(settings) 
+            analyze_energy_long(settings, feature_name, v_axis)
 
 
     def compute_bias_summary_stats(self):
@@ -91,6 +130,8 @@ class MultiRegressionAnalysis:
             '#e377c2', '#f7b6d2', '#7f7f7f', '#c7c7c7', '#bcbd22', '#dbdb8d',
             '#17becf', '#9edae5']
         
+        plt.rcdefaults()
+        
         for i, var in enumerate(df['var'].unique()):
             for metric in ['quantile', 'median']:
                 dfsem = df[df['var'] == var].groupby(by=['dead PMT rate', 'var']).sem(ddof=0).reset_index()
@@ -109,7 +150,7 @@ class MultiRegressionAnalysis:
 
                 plt.errorbar(dfmean['dead PMT rate'], y=dfmean[metric], yerr=dfsem[metric], fmt='o', color = color_choices[i], capsize=5)
 
-                ax.set_title(f'Mean and Std of {metric[0].capitalize() + metric[1:]}s of (True - Prediction)s for {var} Axis')
+                ax.set_title(f'Mean and SE of {metric[0].capitalize() + metric[1:]}s of (True - Prediction)s for {var} Axis')
                 ax.set_xlabel('Dead PMT Rate [%]')
                 ax.set_ylabel(metric[0].capitalize() + metric[1:] + ' [cm]')
                 ax.grid(True, linestyle='--', linewidth=0.5)
