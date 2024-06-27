@@ -196,7 +196,7 @@ def regression_analysis(from_path=True, dirpath='outputs', combine=True, true=No
      # loop over X, then Y, then Z and show in different colours
      for i in range(len(vertex_axis)): 
          # debug
-         print('i-th vertex', vertex_axis[i], 'of len = ', len(vertex_axis))
+        #  print('i-th vertex', vertex_axis[i], 'of len = ', len(vertex_axis))
          #color = plt.rcParams["axes.prop_cycle"].by_key()["color"][i]
          color = color_choices[i]
          #Add some custom axes
@@ -421,7 +421,7 @@ def regression_analysis(from_path=True, dirpath='outputs', combine=True, true=No
                 plt.savefig(f"{plot_path}/pred_{target}_{vertex_axis[i]}_{extra_string}.png")
              
              # debug
-             plt.savefig(f"/data/thoriba/t2k/plots/plots_regression_test4/pred_{target}_{vertex_axis[i]}_{extra_string}.png")
+            #  plt.savefig(f"//pred_{target}_{vertex_axis[i]}_{extra_string}.png")
 
              residual_lst.append(residuals)
              residual_lst_wcut.append(residuals_cut)

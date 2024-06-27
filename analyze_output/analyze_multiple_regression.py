@@ -116,7 +116,7 @@ class MultiRegressionAnalysis:
 
         self.computed = True
 
-    def plot_errorbars(self, file_path=None):
+    def plot_errorbars(self, file_path=None, unit=None):
         if file_path is not None and self.computed == False:
             df = pd.read_csv(file_path)
             self.bias_raw_df = df
@@ -133,6 +133,13 @@ class MultiRegressionAnalysis:
         
         plt.rcdefaults()
         
+        if unit is None:
+            if self.settings.target in ['momenta', 'momentum', 'mom']:
+                unit = '%'
+            else:
+                unit = 'cm'
+        
+
         for i, var in enumerate(df['var'].unique()):
             for metric in ['quantile', 'median']:
                 dfsem = df[df['var'] == var].groupby(by=['dead PMT rate', 'var']).sem(ddof=0).reset_index()
@@ -151,11 +158,16 @@ class MultiRegressionAnalysis:
 
                 plt.errorbar(dfmean['dead PMT rate'], y=dfmean[metric], yerr=dfsem[metric], fmt='o', color = color_choices[i], capsize=5)
 
-                ax.set_title(f'Mean and SE of {metric[0].capitalize() + metric[1:]}s of (True - Prediction)s for {var} Axis')
+                if self.settings.target in ['momentum', 'momenta', 'mom']:
+                    title_str = f'{metric[0].capitalize() + metric[1:]} of (True - Pred) / True Momenta for {var} Axis'
+                else:
+                    title_str = f'{metric[0].capitalize() + metric[1:]} of (True - Pred) {self.settings.target[0].capitalize() + self.settings.target[1:]} for {var} Axis'
+
+                ax.set_title(title_str)
                 ax.set_xlabel('Dead PMT Rate [%]')
-                ax.set_ylabel(metric[0].capitalize() + metric[1:] + ' [cm]')
+                ax.set_ylabel(metric[0].capitalize() + metric[1:] + f' [{unit}]')
                 ax.grid(True, linestyle='--', linewidth=0.5)
-                fig.savefig(self.settings.outputPlotPath + f'mean_{var}_axis_{metric}.png')
+                fig.savefig(self.settings.outputPlotPath + f'{self.settings.target}_mean_{var}_axis_{metric}.png')
 
                 plt.close(fig)
 
