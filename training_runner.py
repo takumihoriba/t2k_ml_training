@@ -233,9 +233,11 @@ if args.doEvaluation:
 def multiAnalyses_helper(evalOutputDir=None, sort_by_percent=True):
     '''
     Helper function to retrieve directory names, seed values, iteration values, and percents for multi analyses.
+    Locates a directory directly under evalOutputDir in which evaluation ouputs (for example, labels, pred_xxx, and indices) are stored.
+    evalOutputDir is mlPath provided in analysis_config.ini by default.
     '''
     if evalOutputDir is None:
-        evalOutputDir = args.evaluationOutputDir
+        evalOutputDir = settings.mlPath
     call = ['ls', evalOutputDir]
     res = subprocess.run(call ,capture_output=True, text=True)
     sd_names = re.findall(r'^(multiEval_seed.*)', res.stdout, re.MULTILINE)
@@ -397,7 +399,7 @@ if args.doMultiAnalyses:
     settings = analysisUtils()
     settings.set_output_directory()
     
-    sub_dir_names, _, _, percents = multiAnalyses_helper(args.evaluationOutputDir)
+    sub_dir_names, _, _, percents = multiAnalyses_helper()
 
     if settings.doRegression:
         # analyze_multiple_regression(settings, sub_dir_names[0], percents[0])
@@ -658,8 +660,8 @@ if args.doMultiEvaluations:
     regress  = 1
 
     # dead_pmt_rates = [0.0, 0.03, 0.05, 0.07, 0.1] # [0.03, 0.05, 0.1]
-    dead_pmt_rates = [0.0, 0.03, .05, 0.10]
-    iterations_per_rate = 15
+    # dead_pmt_rates = [0.0, 0.03, .05, 0.10]
+    # iterations_per_rate = 15
 
     dead_pmt_rates = [0.0, 0.03, .05]
     iterations_per_rate = 2

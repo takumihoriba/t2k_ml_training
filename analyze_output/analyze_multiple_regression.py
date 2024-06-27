@@ -139,6 +139,11 @@ class MultiRegressionAnalysis:
             else:
                 unit = 'cm'
         
+        if unit == '%':
+            percentify = 100
+        else:
+            percentify = 1
+        
 
         for i, var in enumerate(df['var'].unique()):
             for metric in ['quantile', 'median']:
@@ -156,7 +161,7 @@ class MultiRegressionAnalysis:
                         dfsem.loc[r, 'quantile'] = df[df['var'] == var]['quantile error'].loc[r]
                         dfsem.loc[r, 'median'] = df[df['var'] == var]['median error'].loc[r]
 
-                plt.errorbar(dfmean['dead PMT rate'], y=dfmean[metric], yerr=dfsem[metric], fmt='o', color = color_choices[i], capsize=5)
+                plt.errorbar(dfmean['dead PMT rate'], y=dfmean[metric]*percentify, yerr=dfsem[metric]*percentify, fmt='o', color = color_choices[i], capsize=5)
 
                 if self.settings.target in ['momentum', 'momenta', 'mom']:
                     title_str = f'{metric[0].capitalize() + metric[1:]} of (True - Pred) / True Momenta for {var} Axis'
