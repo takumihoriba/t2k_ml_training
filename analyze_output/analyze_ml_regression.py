@@ -4,6 +4,8 @@ import sys
 
 import matplotlib
 from matplotlib import pyplot as plt
+import seaborn as sns
+import pandas as pd
 
 from scipy.optimize import curve_fit
 
@@ -134,6 +136,173 @@ def analyze_ml_regression(settings):
      multi_analysis["tot_charge"] = [bin_dict, quant_dict, quant_error_dict, mu_dict, mu_error_dict]
 
      return single_analysis, multi_analysis 
+
+
+def save_residual_residual_plot(settings, targets=['positions', 'momenta'], axes=['Longitudinal', 'Global'], ml_paths=None, plotsavepath=None):
+     """
+     Saves a residual-vs-residual scatter plot by looking at 2 residual vectors assocaited to 2 different regression targets.
+
+     Params
+     --------------
+     settings: 
+     targets: list of 2 strings
+     axes: list of 2 strings
+     ml_paths: list of 2 strings
+     plotsavepath: str
+     """
+     
+     #First argument is where to save plot
+     #Second one where to get data
+
+     print('combining two regression results from ', ml_paths)
+
+     
+     
+     res_res_list = []
+
+     for (files, target, v_axis) in zip(ml_paths, targets, axes):
+
+          ml_combine_path = settings.inputPath
+          hy = h5py.File(ml_combine_path+'combine_combine.hy', "r")
+
+          preds = np.load(files+'predicted_'+str(target)+'.npy')
+          truth = np.load(files+target+'.npy')
+          labels = np.load(files + 'labels.npy')
+          indices = np.load(files + 'indices.npy')
+
+          # print('truth shape', truth.shape)
+          # print('preds shape', preds.shape)
+          # print('indices shape', indices.shape)
+
+          # calculate number of hits 
+          events_hits_index = np.append(hy['event_hits_index'], hy['hit_pmt'].shape[0])
+          nhits = (events_hits_index[indices+1] - events_hits_index[indices]).squeeze()
+          total_charge = np.array([part.sum() for part in np.split(hy['hit_charge'], np.cumsum(nhits))[:-1]])
+          #total_charge_2 = np.add.reduceat(hy['hit_charge'], np.cumsum(nhits)[:-1])
+          rootfiles = np.array(hy['root_files'])[indices].squeeze()
+          event_ids = np.array(hy['event_ids'])[indices].squeeze()
+          energies = np.array(hy['energies'])[indices].squeeze()
+          directions = np.array(hy['directions'])[indices].squeeze()
+          positions = np.array(hy['positions'])[indices].squeeze()
+          angles = math.angles_from_direction(directions)
+          towall = math.towall(positions, angles, tank_axis = 2)
+
+          nhits_cut = 200
+
+          # print('cut nhits', np.sum(nhits> nhits_cut))
+
+          # print('truth shape', truth.shape)
+          # print('preds shape', preds.shape)
+          # print('indices shape', indices.shape)
+          # print('nhits > nhits_cut', (nhits> nhits_cut).shape)
+
+          #Apply cuts
+          event_ids = event_ids[(nhits> nhits_cut)]
+          rootfiles = rootfiles[(nhits> nhits_cut)]
+          preds = preds[(nhits> nhits_cut)]
+          truth = truth[(nhits> nhits_cut)]
+          labels = labels[(nhits> nhits_cut)]
+          energies = energies[(nhits> nhits_cut)]
+          directions = directions[(nhits> nhits_cut)]
+          total_charge = total_charge[(nhits> nhits_cut)]
+          towall = towall[(nhits> nhits_cut)]
+          
+          # do this before nhits gets changed
+          indices = indices[(nhits> nhits_cut)]
+          
+          nhits = nhits[(nhits> nhits_cut)]
+
+          # print('truth shape', truth.shape)
+          # print('preds shape', preds.shape)
+          # print('indices shape', indices.shape)
+          # print('nhits > nhits_cut', (nhits> nhits_cut).shape)
+
+          
+
+
+
+          cheThr = list(map(get_cherenkov_threshold, labels))
+          visible_energy = energies - cheThr
+
+          print(f"PARTICLE LABEL: {settings.particleLabel}")
+          preds = preds[labels==settings.particleLabel]
+          truth = truth[labels==settings.particleLabel]
+          directions = directions[labels==settings.particleLabel]
+          total_charge = total_charge[labels==settings.particleLabel]
+          visible_energy = visible_energy[labels==settings.particleLabel]
+          towall = towall[labels==settings.particleLabel]
+          nhits = nhits[labels==settings.particleLabel]
+
+          indices = indices[labels==settings.particleLabel]
+
+          # print('cut for truth', labels==settings.particleLabel)
+          # print('particle label', settings.particleLabel)
+          # print('truth after', truth)
+          # print('a', preds[:,0].shape)
+          # print('b', truth[:,0].shape)
+
+          correction = 1
+
+          if "positions" in target or "directions" in target:
+               pred_x = preds[:,0]*correction 
+               pred_y = preds[:,1]*correction
+               pred_z = preds[:,2]*correction 
+
+               truth_x = truth[:,0]*correction 
+               truth_y = truth[:,1]*correction 
+               truth_z = truth[:,2]*correction 
+               truth_0 = np.stack((truth_x, truth_y, truth_z), axis=1)
+               pred_0 = np.stack((pred_x, pred_y, pred_z), axis=1)
+          if "energies" in target or "momenta" in target:
+               truth_0 = np.ravel(truth)
+               pred_0 = np.ravel(preds)
+
+          print('truth_0', truth_0)
+          print('truth_0 shape', truth_0.shape)
+          
+          # print('energies shape', energies.shape)
+          # print('visible energies shape', visible_energy.shape)
+          
+          
+          # residuals along Vertex Axis (v_a)
+          residuals = compute_residuals(from_path=False, true=truth_0, pred=pred_0, dir = directions, target=target, extra_string="ML_"+settings.plotName, save_plots=False, plot_path = settings.outputPlotPath, v_axis=v_axis)
+          print('residuals', residuals.shape)
+          print('indices', indices.shape)
+
+          print('residuals mean', np.mean(residuals))
+          print('residaul std', np.std(residuals))
+
+          sorted_indices = np.argsort(indices)
+          sorted_res = residuals[sorted_indices]
+
+          print("first 10 residuals:", sorted_res[:10])
+          print("first 10 indices:  ", indices[sorted_indices][:10])
+
+          res_res_list.append(sorted_res)
+     
+     # fig, ax = plt.subplots()
+     # ax.scatter(res_res_list[0], res_res_list[1], s= 0.1)
+     # ax.set_xlabel(f'{targets[0]} residuals for {axes[0]} axis')
+     # ax.set_ylabel(f'{targets[1]} residuals for {axes[1]} axis')
+     # ax.set_title('Residual vs Residual Plot (Corrrelation coeff = ' + str(round(np.corrcoef(res_res_list[0], res_res_list[1])[0,1], 4)) + ')')
+     # # ax.set_ybound([-150, 150])
+     # fig.savefig(settings.outputPlotPath + f'scatter_{v_axis}_axis_res_res_{targets[0]}_{targets[1]}.png')
+     # print(f'Saved residual vs residual plot')
+
+     
+     df = pd.DataFrame({
+          f'{targets[0]} residuals for {axes[0]} axis': res_res_list[0],
+          f'{targets[1]} residuals for {axes[1]} axis': res_res_list[1]
+     })
+
+     joint_plot = sns.jointplot(data=df, x=f'{targets[0]} residuals for {axes[0]} axis', y=f'{targets[1]} residuals for {axes[1]} axis', kind='scatter', 
+                           marginal_kws=dict(bins=50, fill=True))
+
+     plt.savefig(settings.outputPlotPath + f'{v_axis}_axis_res_res_{targets[0]}_{targets[1]}.png')
+     
+
+
+     return
 
 
 def save_residual_plot(settings, feature_name='energy', v_axis='Longitudinal'):

@@ -1,5 +1,5 @@
 # implement later
-from analyze_output.analyze_ml_regression import analyze_ml_regression, save_residual_plot #, analyze_energy_long
+from analyze_output.analyze_ml_regression import analyze_ml_regression, save_residual_plot, save_residual_residual_plot #, analyze_energy_long
 from analyze_output.analyze_regression import analysisResults
 
 import numpy as np
@@ -74,7 +74,32 @@ class MultiRegressionAnalysis:
             # single_ml_analysis, multi_ml_analysis = analyze_ml_regression(settings) 
             # analyze_energy_long(settings, feature_name, v_axis)
             save_residual_plot(settings, feature_name, v_axis)
+    
+    def plot_residual_residual_scatter(self, targets=['positions', 'momenta'], axes=['Longitudinal', 'Global'], ml_paths=None):
+        if ml_paths is None:
+            print('ml_paths should be a list of 2 paths to directories where evaluation outputs (indices.npy, pred_xxx.npy, etc) are stored')
+            print("Example: ml_paths = ['/data/username/model/reg1/', '/data/username/model/reg1/']")
+            return
+        settings = self.settings
+        percents = self.percents
+        sub_dir_names = self.sub_dirs
+        BASE_PATH = settings.mlPath
+        # for i, sub_dir in enumerate(sub_dir_names):
+        # print('BASE_PATH', BASE_PATH)
+        print('-----------plot_residual_residual_scatter_plot------------------')
+        print('particleLabel', settings.particleLabel)
+        print('inputPath', settings.inputPath)
+        print('fitqunPath', settings.fitqunPath)
+        print('targets', targets)
+        print('axes for targets', axes)
+        # settings.mlPath = BASE_PATH + sub_dir + '/'
+        # print('mlPath', settings.mlPath)
+        print('from evaluation outputs stored in ', ml_paths)
+        # single_ml_analysis, multi_ml_analysis = analyze_ml_regression(settings) 
+        # analyze_energy_long(settings, feature_name, v_axis)
+        save_residual_residual_plot(settings, targets, axes, ml_paths)
 
+        
 
     def compute_bias_summary_stats(self):
         settings = self.settings
@@ -238,6 +263,8 @@ def analyze_multiple_regression(settings, sub_dir_names, percents):
     # save_boxplots(settings, df)
 
 
+def compare_residuals_scatter():
+    pass
 
 
 

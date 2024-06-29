@@ -641,9 +641,6 @@ def compute_residuals(from_path=True, dirpath='outputs', combine=True, true=None
                 residuals = (true - pred)/true
              elif "Global" in vertex_axis[i] and "positions" in target:
                 residuals = true[:,i]
-            #  elif vertex_axis[i] == 'Longitudinal' and 'positions' in target:
-            #      print('returing long residuals')
-            #      return true[:,i] - pred[:,i] 
              else:
                 residuals = true[:,i] - pred[:,i] 
 

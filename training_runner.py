@@ -406,8 +406,24 @@ if args.doMultiAnalyses:
         # sub_dir_names = ['']
         # percents = [3]
         print('doing multiple regression analysis here')
-        mra = MultiRegressionAnalysis(settings, sub_dir_names, percents)
-        mra.plot_errorbars()
+        # mra = MultiRegressionAnalysis(settings, sub_dir_names, percents)
+        # mra.plot_errorbars()
+
+
+        mra = MultiRegressionAnalysis(settings=settings, sub_dir_names=sub_dir_names[:1], percents=percents[:1])
+        mra.plot_residual_residual_scatter(targets=['positions', 'momenta'], 
+                                           axes=['Longitudinal', 'Global'], 
+                                           ml_paths=['/data/thoriba/t2k/models/public/muon_pos_jun26/multiEval_seed_0_0th_itr_0_percent_20240626102316/', '/data/thoriba/t2k/models/public/muon_mom_jun26/multiEval_seed_0_0th_itr_0_percent_20240626000000/']
+                                           )
+        
+        # # mra.plot_errorbars(file_path=settings.outputPlotPath + 'reg_analysis_metrics.csv')
+        # mra.compute_bias_summary_stats()
+        # mra.plot_resdiual_scatter('energy', 'Longitudinal')
+        # mra.plot_resdiual_scatter('visible energy', 'Longitudinal')
+        # mra.plot_resdiual_scatter('nhit', 'Longitudinal')
+        # mra.plot_resdiual_scatter('towall', 'Longitudinal')
+        # mra.plot_resdiual_scatter('total_charge', 'Longitudinal')
+
 
     if settings.doClassification:
         pass
@@ -659,16 +675,12 @@ if args.doMultiEvaluations:
     classify = 0
     regress  = 1
 
-    # dead_pmt_rates = [0.0, 0.03, 0.05, 0.07, 0.1] # [0.03, 0.05, 0.1]
-    # dead_pmt_rates = [0.0, 0.03, .05, 0.10]
-    # iterations_per_rate = 15
+    dead_pmt_rates = [0.0, 0.03, .05, 0.10]
+    iterations_per_rate = 15
 
-    dead_pmt_rates = [0.0, 0.03, .05]
-    iterations_per_rate = 2
-
-
-    print('Dead pmt rates (%)', np.array(dead_pmt_rates) * 100)
+    print('Dead pmt rates (%)', np.round(np.array(dead_pmt_rates) * 100))
     print(f'for {iterations_per_rate} iterations per percent')
+
 
     if classify:
         print('ML task: Classification')
