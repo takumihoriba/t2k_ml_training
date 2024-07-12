@@ -21,28 +21,57 @@ sys.path.append('/home/thoriba/t2k2/t2k_ml_training/WatChMaL/watchmal/')
 sys.path.append('/home/thoriba/t2k2/t2k_ml_training/WatChMaL/')
 from cnn_dataset import CNNDataset, CNNDatasetDeadPMT, CNNDatasetScale
 
-
-h5file = '/fast_scratch_2/fcormier/t2k/ml/data/oct20_combine_flatE/combine_combine.hy'
+# h5file = '/fast_scratch_2/fcormier/t2k/ml/data/oct20_combine_flatE/combine_combine.hy'
+# h5file = '/data/thoriba/t2k/datasets/apr3_eMuPiPlus_1500MeV_small_1/multi_combine.hy'
 pmt_pos = '/data/thoriba/t2k/imagefile/skdetsim_imagefile.npy'
 
-cs = {'fitted_scaler': None,
+# bigger dataset and indices taken from reg (elec_pos)
+h5file = '/fast_scratch_2/fcormier/t2k/ml/data/oct20_combine_flatE/combine_combine.hy'
+indices = '/fast_scratch_2/fcormier/t2k/ml/data/oct20_combine_flatE/train_val_test_nFolds3_fold0.npz'
+
+
+# ['/home/thoriba/t2k2/t2k_ml_training/chain_scaler_1_quantile_normal.joblib', '/home/thoriba/t2k2/t2k_ml_training/chain_scaler_2_minmax.joblib']
+
+cs = {'fitted_scaler': None, # set None to fit a new scaler, if provided, only this and transform_per_batch will be used.
       'scaler_type': 'minmax',
       'sample_size': 10000,
-      'dataset_index_file': None
+      'dataset_index_file': indices,
+      'transform_per_batch': False
       }
-# cnn = CNNDatasetScale(h5file, pmt_pos, channel_scaler=cs)
+cnn = CNNDatasetScale(h5file, pmt_pos, channel_scaler=cs)
 
-# dump(cnn.scaler, 'scaler.joblib')
+# gotten_item = cnn.__getitem__(100)
 
-scaler = load('scaler.joblib')
+for i in range(10):
+      cnn.__getitem__(i)
 
-print(scaler.get_params())
+# print(gotten_item.keys())
 
-test_array = np.array([100*i for i in range(5, 15)])
-print('before', test_array)
-test_array = scaler.transform(test_array.reshape(-1, 1))
+# print(gotten_item['data'])
 
-print('after', test_array)
+# dump(cnn.scaler, 'scaler_minmax_test.joblib')
+
+# scaler = load('scaler_minmax_test.joblib')
+# scaler1 = load('chain_scaler_1_quantile_normal.joblib')
+# scaler2 = load('chain_scaler_2_minmax.joblib')
+
+# print(scaler1.get_params())
+# print(scaler2.get_params())
+
+
+
+# test_array = np.array([100*i for i in range(5, 15)])
+# print('before', test_array)
+# test_array = scaler1.transform(test_array.reshape(-1, 1))
+
+# print('after', test_array)
+
+# test_array = scaler1.transform(test_array.reshape(-1, 1))
+
+# with h5py.File('/fast_scratch_2/fcormier/t2k/ml/data/oct20_combine_flatE/combine_combine.hy', mode='r') as h5all:
+#     times = np.ravel(h5all['hit_time'])
+#     event_hits_index = np.ravel(h5all['event_hits_index'])
+
 
 
 

@@ -70,8 +70,7 @@ def analyze_ml_regression(settings):
           towall = towall[(nhits> nhits_cut)]
           nhits = nhits[(nhits> nhits_cut)]
 
-
-          # is it okay to turn this off??? I might be using wrong fitqun etc.. See if I can find the issue tmr june 21.
+          # fitqun is always same for all evals
           ml_hash = fq.get_rootfile_eventid_hash(rootfiles, event_ids, fitqun=False)
           intersect, comm1, comm2 = np.intersect1d(fitqun_hash, ml_hash, return_indices=True)
           preds = preds[comm2]
@@ -120,20 +119,21 @@ def analyze_ml_regression(settings):
           truth_0 = np.ravel(truth)
           pred_0 = np.ravel(preds)
 
-     print('truth_0', truth_0)
-     print('truth_0 len', len(truth_0))
-     print('energy', energies)
-     print('energy shape', energies.shape)
+     # print('truth_0', truth_0)
+     # print('truth_0 len', len(truth_0))
+     # print('energy', energies)
+     # print('energy shape', energies.shape)
 
      vertex_axis, quantile_lst, quantile_error_lst, median_lst, median_error_lst = regression_analysis(from_path=False, true=truth_0, pred=pred_0, dir = directions, target=target, extra_string="ML_"+settings.plotName, save_plots=True, plot_path = settings.outputPlotPath)
      single_analysis = [vertex_axis, quantile_lst, quantile_error_lst, median_lst, median_error_lst] 
      multi_analysis = {}
-     bin_dict, quant_dict, quant_error_dict, mu_dict, mu_error_dict = regression_analysis_perVar(from_path=False, true=truth_0, pred=pred_0, dir = directions, target=target, extra_string="ML_"+settings.plotName, save_plots=False, variable=towall)
-     multi_analysis["towall"] = [bin_dict, quant_dict, quant_error_dict, mu_dict, mu_error_dict]
-     bin_dict, quant_dict, quant_error_dict, mu_dict, mu_error_dict = regression_analysis_perVar(from_path=False, true=truth_0, pred=pred_0, dir=directions, target=target,extra_string="ML_"+settings.plotName, save_plots=False, variable=visible_energy)
-     multi_analysis["ve"] = [bin_dict, quant_dict, quant_error_dict, mu_dict, mu_error_dict]
-     bin_dict, quant_dict, quant_error_dict, mu_dict, mu_error_dict = regression_analysis_perVar(from_path=False, true=truth_0, pred=pred_0, dir=directions, target=target,extra_string="ML_"+settings.plotName, save_plots=False, variable=total_charge)
-     multi_analysis["tot_charge"] = [bin_dict, quant_dict, quant_error_dict, mu_dict, mu_error_dict]
+     # comment out below to speed up analyze multiple regression
+     # bin_dict, quant_dict, quant_error_dict, mu_dict, mu_error_dict = regression_analysis_perVar(from_path=False, true=truth_0, pred=pred_0, dir = directions, target=target, extra_string="ML_"+settings.plotName, save_plots=False, variable=towall)
+     # multi_analysis["towall"] = [bin_dict, quant_dict, quant_error_dict, mu_dict, mu_error_dict]
+     # bin_dict, quant_dict, quant_error_dict, mu_dict, mu_error_dict = regression_analysis_perVar(from_path=False, true=truth_0, pred=pred_0, dir=directions, target=target,extra_string="ML_"+settings.plotName, save_plots=False, variable=visible_energy)
+     # multi_analysis["ve"] = [bin_dict, quant_dict, quant_error_dict, mu_dict, mu_error_dict]
+     # bin_dict, quant_dict, quant_error_dict, mu_dict, mu_error_dict = regression_analysis_perVar(from_path=False, true=truth_0, pred=pred_0, dir=directions, target=target,extra_string="ML_"+settings.plotName, save_plots=False, variable=total_charge)
+     # multi_analysis["tot_charge"] = [bin_dict, quant_dict, quant_error_dict, mu_dict, mu_error_dict]
 
      return single_analysis, multi_analysis 
 
@@ -295,13 +295,22 @@ def save_residual_residual_plot(settings, targets=['positions', 'momenta'], axes
           f'{targets[1]} residuals for {axes[1]} axis': res_res_list[1]
      })
 
-     joint_plot = sns.jointplot(data=df, x=f'{targets[0]} residuals for {axes[0]} axis', y=f'{targets[1]} residuals for {axes[1]} axis', kind='scatter', 
-                           marginal_kws=dict(bins=50, fill=True))
+     # joint_plot = sns.jointplot(data=df, x=f'{targets[0]} residuals for {axes[0]} axis', y=f'{targets[1]} residuals for {axes[1]} axis', kind='scatter', 
+     #                       marginal_kws=dict(bins=50, fill=True))
+     # plt.savefig(settings.outputPlotPath + f'{v_axis}_axis_res_res_{targets[0]}_{targets[1]}.png')
+     # plt.clf()
 
-     plt.savefig(settings.outputPlotPath + f'{v_axis}_axis_res_res_{targets[0]}_{targets[1]}.png')
+     joint_plot_heat = sns.jointplot(data=df,
+                                     x=f'{targets[0]} residuals for {axes[0]} axis', 
+                                     y=f'{targets[1]} residuals for {axes[1]} axis', kind='hist', 
+                                     marginal_kws=dict(bins=5000, fill=True),
+                                     color='blue')
      
-
-
+     # plt.xlabel()
+     plt.ylabel(f'{targets[1]} residuals for {axes[1]} axis')
+     plt.ylim([-0.05, .05])
+     plt.xlim([-15, 15])
+     plt.savefig(settings.outputPlotPath + f'{v_axis}_axis_res_res_{targets[0]}_{targets[1]}_hist_zoom_03.png')
      return
 
 
@@ -419,7 +428,8 @@ def save_residual_plot(settings, feature_name='energy', v_axis='Longitudinal'):
      ax.scatter(feature, v_a_residuals, s= 0.1)
      ax.set_xlabel(feature_name)
      ax.set_ylabel(f'Residual Along {v_axis} Axis')
-     ax.set_title('Residual vs Feature Plot (Corr = ' + str(round(np.corrcoef(feature, v_a_residuals)[0,1], 4)) + ')')
+     corr = '(Correlaion coefficient = ' + str(round(np.corrcoef(feature, v_a_residuals)[0,1], 4)) + ')'
+     ax.set_title(f'Residual ({v_axis}) vs {feature_name}')
      # ax.set_ybound([-150, 150])
      fig.savefig(settings.outputPlotPath + f'scatter_{v_axis}_axis_residual_vs_{feature_name}.png')
      print(f'Saved residual plots {v_axis} vs {feature_name}')

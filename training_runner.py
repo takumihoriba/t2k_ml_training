@@ -142,7 +142,8 @@ def init_training():
         default_call.append("dump_path=" +str(settings.outputPath))
         print(default_call)
         subprocess.call(default_call)
-        end_training(settings, variable_list, x)
+        # turned off for now (july 4)
+        # end_training(settings, variable_list, x)
 
 
 def check_list_and_convert(input):
@@ -210,8 +211,8 @@ if args.doEvaluation:
     settings = utils()
     settings.outputPath = args.evaluationOutputDir
     settings.set_output_directory()
-    # default_call = ["python", "WatChMaL/main.py", "--config-name=t2k_resnet_eval"] 
-    default_call = ["python", "WatChMaL/main.py", "--config-name=t2k_resnet_eval_dead"] 
+    default_call = ["python", "WatChMaL/main.py", "--config-name=t2k_resnet_eval"] 
+    # default_call = ["python", "WatChMaL/main.py", "--config-name=t2k_resnet_eval_scale"] 
     # default_call = ["python", "WatChMaL/main.py", "--config-name=t2k_resnet_eval_classifier_dead"] 
     # default_call = ["python", "WatChMaL/main.py", "--config-name=t2k_resnet_eval_classifier_dead_scale"] 
     
@@ -243,8 +244,10 @@ def multiAnalyses_helper(evalOutputDir=None, sort_by_percent=True):
     sd_names = re.findall(r'^(multiEval_seed.*)', res.stdout, re.MULTILINE)
     seeds = re.findall(r'^multiEval_seed_(\d*)_.*', res.stdout, re.MULTILINE)
     itrs = re.findall(r'^multiEval_seed_.*_(\d*)th_itr_.*', res.stdout, re.MULTILINE)
-    percents = re.findall(r'^multiEval_seed_.*itr_(\d*)_percent_.*', res.stdout, re.MULTILINE)
-    percents = [int(p) for p in percents]
+    percents = re.findall(r'^multiEval_seed_.*itr_(\d+p?\d*)_percent_.*', res.stdout, re.MULTILINE)
+    # percents = [int(p) for p in percents]
+    # now percents list is not a list of integers.
+    percents = [float(percent_str.replace('p', '.')) for percent_str in percents]
 
     if sort_by_percent:
         comb = list(zip(sd_names, percents, seeds, itrs))
@@ -258,87 +261,13 @@ def multiAnalyses_helper(evalOutputDir=None, sort_by_percent=True):
     else:
         return sd_names, seeds, itrs, percents
 
-def copy_npy(i, s, p, mode='classification'):
-    '''
-    Copies *.npy files and .hydra directory (and its files inside) into a new folder
-    Returns nothing.
-
-    Parameters
-    ----------
-    i: iteration
-    s: seed
-    p: probability
-        In [0, 1]
-    mode: either classification or regression
-    '''
-    # if mode is None:
-    #     print('mode must not be null')
-    #     raise ValueError()
-
-    date_time_str = datetime.today().strftime("%Y%m%d%H%M%S")
-    dir_name = args.evaluationOutputDir + f'multiEval_seed_{s}_{i}th_itr_{round(p*100)}_percent_{date_time_str}/'
-    os.makedirs(dir_name, exist_ok=True)
-    source_dir = args.evaluationOutputDir
-    
-    # copy result files of evaluation
-    r = subprocess.run(['ls', source_dir], capture_output=True, text=True)
-    npy_file_names = re.findall(r'^.*\.npy', r.stdout, re.MULTILINE)
-    npy_files_names_dir = [source_dir + npy_f for npy_f in npy_file_names]
-
-    cp_command = npy_files_names_dir.copy()
-    cp_command.append(dir_name)
-    cp_command.insert(0, 'cp')
-
-    # cp_command = []
-    # if mode == 'classification' or mode[0] == 'c':
-    #     cp_command = ["cp", f"{source_dir}/indices.npy",f"{source_dir}/labels.npy",f"{source_dir}/softmax.npy", dir_name]
-    # elif mode == 'regression' or mode[0] == 'r':
-    #     cp_command = ["cp", f"{source_dir}/indices.npy",f"{source_dir}/labels.npy",f"{source_dir}/positions.npy",f"{source_dir}/predicted_positions.npy", dir_name]
-    # else:
-    #     print('mode must be either classification or regression')
-    #     raise ValueError()
-
-    result = subprocess.run(cp_command, capture_output=True, text=True)
-    print(result.stdout)
-    print(result.stderr)
-
-    # copy .hydra files recursively
-    cp_command = ["cp", "-r", f"{source_dir}/.hydra", dir_name]
-    result = subprocess.run(cp_command, capture_output=True, text=True)
-    print(result.stdout)
-    print(result.stderr)
-
-
-    print(npy_file_names, 'were copied to ', dir_name)
-    return dir_name
 
 if args.testParser:
-    settings = utils()
 
-    copy_npy(4, 4, .04)
-    # source_dir = args.evaluationOutputDir
-    # comm = ['ls', source_dir]
-    
-    # r = subprocess.run(comm, capture_output=True, text=True)
-    # # print(r.stdout)
-    # npy_file_names = re.findall(r'^.*\.npy', r.stdout, re.MULTILINE)
-    # print(npy_file_names)
-
-    # npy_files_names_dir = [source_dir + npy_f for npy_f in npy_file_names]
-    # print(npy_files_names_dir)
-
-    # dest_dir = '/data/thoriba/t2k/models/public/elec_dir_jun26/copy_test/'
-    # os.makedirs(dest_dir, exist_ok=True)
-    # cp_command = npy_files_names_dir.copy()
-    # cp_command.append(dest_dir)
-    # cp_command.insert(0, 'cp')
-    # print(cp_command)
-
-
-    # settings = analysisUtils()
-    # settings.set_output_directory()
+    settings = analysisUtils()
+    settings.set_output_directory()
         
-    # sub_dir_names, _, _, percents = multiAnalyses_helper(args.evaluationOutputDir)
+    sub_dir_names, _, _, percents = multiAnalyses_helper()
 
     # # settings.doRegression = True
     # # settings.mlPath = '/data/thoriba/t2k/eval/oct20_eMuPosPion_0dwallCut_flat_1/09052024-171021_regress/22032024-142255/'
@@ -403,18 +332,33 @@ if args.doMultiAnalyses:
 
     if settings.doRegression:
         # analyze_multiple_regression(settings, sub_dir_names[0], percents[0])
-        # sub_dir_names = ['']
-        # percents = [3]
-        print('doing multiple regression analysis here')
-        # mra = MultiRegressionAnalysis(settings, sub_dir_names, percents)
+        # sub_dir_names = ['multiEval_seed_0_0th_itr_0_percent_20240702101048']
+        # percents = [0]
+        # print('doing multiple regression analysis here')
+        mra = MultiRegressionAnalysis(settings, sub_dir_names, percents)
         # mra.plot_errorbars()
+        mra.plot_errorbars_multi_models(file_paths=
+            ['/data/thoriba/t2k/plots/muon_momenta_dropout_analysis_2/reg_analysis_metrics.csv',
+            '/data/thoriba/t2k/plots/resnet_jun26_muon_momenta_gt200Hits_timeO400S1000_2GeV_2M_DO0p1_1/09072024-101033/reg_analysis_metrics.csv',
+            '/data/thoriba/t2k/plots/muon_mom_jun26/reg_analysis_metrics_correct.csv'], unit='%',
+            labels=['5% Dropout', '10% Dropout', 'Without Dropout'])
 
 
-        mra = MultiRegressionAnalysis(settings=settings, sub_dir_names=sub_dir_names[:1], percents=percents[:1])
-        mra.plot_residual_residual_scatter(targets=['positions', 'momenta'], 
-                                           axes=['Longitudinal', 'Global'], 
-                                           ml_paths=['/data/thoriba/t2k/models/public/muon_pos_jun26/multiEval_seed_0_0th_itr_0_percent_20240626102316/', '/data/thoriba/t2k/models/public/muon_mom_jun26/multiEval_seed_0_0th_itr_0_percent_20240626000000/']
-                                           )
+
+        # mra = MultiRegressionAnalysis(settings=settings, sub_dir_names=sub_dir_names[:1], percents=percents[:1])
+
+        # mra.plot_resdiual_scatter('energy', 'Longitudinal')
+        # mra.plot_resdiual_scatter('visible energy', 'Longitudinal')
+
+        # mra.plot_resdiual_scatter('nhit', 'Longitudinal')
+        # mra.plot_resdiual_scatter('towall', 'Longitudinal')
+        # mra.plot_resdiual_scatter('total_charge', 'Longitudinal')
+        
+        # mra.plot_residual_residual_scatter(targets=['positions', 'momenta'], 
+        #                                    axes=['Longitudinal', 'Global'], 
+        #                                    ml_paths=['/data/thoriba/t2k/models/public/muon_pos_jun26/multiEval_seed_0_0th_itr_0_percent_20240702101048/',
+        #                                              '/data/thoriba/t2k/models/public/muon_mom_jun26/multiEval_seed_0_0th_itr_0_percent_20240628172323/']
+        #                                    )
         
         # # mra.plot_errorbars(file_path=settings.outputPlotPath + 'reg_analysis_metrics.csv')
         # mra.compute_bias_summary_stats()
@@ -493,7 +437,7 @@ def run_evaluation(count=1, dead_pmt_seed=5, dead_pmt_rate=.03, config_name='t2k
     print("Output: ", result.stdout)
     return result
 
-def copy_npy(i, s, p, mode='classification'):
+def copy_npy(i, s, p):
     '''
     Copies *.npy files and .hydra directory (and its files inside) into a new folder
     Returns nothing.
@@ -509,7 +453,11 @@ def copy_npy(i, s, p, mode='classification'):
     '''
 
     date_time_str = datetime.today().strftime("%Y%m%d%H%M%S")
-    dir_name = args.evaluationOutputDir + f'multiEval_seed_{s}_{i}th_itr_{round(p*100)}_percent_{date_time_str}/'
+    if (p * 100).is_integer():
+        percent_str = f"{int(p * 100)}"
+    else:
+        percent_str = f"{p * 100:.2f}".replace('.', 'p')
+    dir_name = args.evaluationOutputDir + f'multiEval_seed_{s}_{i}th_itr_{percent_str}_percent_{date_time_str}/'
     os.makedirs(dir_name, exist_ok=True)
     source_dir = args.evaluationOutputDir
     
@@ -561,7 +509,7 @@ def multi_evaluations_regression(settings, probs=[.03, .05, .1], itr=10, config_
             else:
                 sums += loss_curr
 
-            dir_name = copy_npy(i, s, prob, 'regression')
+            dir_name = copy_npy(i, s, prob)
             np.savetxt(dir_name + 'loss.csv', loss_curr, delimiter=',')
 
             if prob == 0. and one_itr_for_zero_percent:
@@ -609,7 +557,7 @@ def multi_evaluations_classification(settings, probs=[.03, .05, .1], itr=10, con
             losses_per_prob.append(acc_loss_curr[0])
             
             # copy evaluation ouputs to a new folder (sub-directory); save accuracy and loss as csv
-            dir_name = copy_npy(i, s, prob, 'classification')
+            dir_name = copy_npy(i, s, prob)
             np.savetxt(dir_name + 'accuracy_loss'+'.csv', acc_loss_curr, delimiter=',')
 
             if prob == 0. and one_itr_for_zero_percent:
@@ -669,26 +617,31 @@ if args.doMultiEvaluations:
     '''
     settings = utils()
 
-    print('Doing multiple evaluations')
+    print('Multiple evaluations. Review TODOs in the code to make sure running with correct settings.')
 
-    # TODO: Modify these values.
+    # TODO: Pick classification or regression
     classify = 0
     regress  = 1
 
-    dead_pmt_rates = [0.0, 0.03, .05, 0.10]
-    iterations_per_rate = 15
+    # TODO: provide dead pmt rate (float between 0 and 1) and iterations (integer)
+    # dead_pmt_rates = [0.0, 0.03, .05, 0.10]
+    dead_pmt_rates = [0.0, 0.005, 0.01, 0.02]
+    iterations_per_rate = 8
 
-    print('Dead pmt rates (%)', np.round(np.array(dead_pmt_rates) * 100))
+    print('Dead pmt rates (%)', np.array(dead_pmt_rates) * 100)
     print(f'for {iterations_per_rate} iterations per percent')
 
 
     if classify:
         print('ML task: Classification')
+        # TODO: change config name
         matrix = multi_evaluations_classification(settings, probs=dead_pmt_rates, itr=iterations_per_rate,
-                                                  config_name='t2k_resnet_eval_classifier_dead_scale', one_itr_for_zero_percent=True)
+                                                  config_name='t2k_resnet_eval_classifier_dead_scale',
+                                                  one_itr_for_zero_percent=True)
         print(matrix)
     if regress:
         print('ML task: Regression')
+        # TODO: change config name
         matrix = multi_evaluations_regression(settings, probs=dead_pmt_rates, itr=iterations_per_rate,
                                               config_name='t2k_resnet_eval_dead',
                                               one_itr_for_zero_percent=True)

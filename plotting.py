@@ -169,8 +169,9 @@ def regression_analysis(from_path=True, dirpath='outputs', combine=True, true=No
      vertex_axis = ['X','Y','Z']
      if "positions" in target:
          vertex_axis.append('Global')
-         vertex_axis.append('Longitudinal')
+         vertex_axis.append('Longitudinal')      
          vertex_axis.append('Transverse')
+         vertex_axis.append('TransverseAbsolute')
      if "directions" in target:
          vertex_axis.append('Angle')
          vertex_axis.append('Longitudinal Angle')
@@ -217,6 +218,13 @@ def regression_analysis(from_path=True, dirpath='outputs', combine=True, true=No
              true = np.hstack((true, np.reshape(temp_true, (true.shape[0], 1))))
              pred = np.hstack((pred, np.reshape(temp_pred, (pred.shape[0], 1))))
          if 'Transverse' in vertex_axis[i] and "positions" in target:
+             total_magnitude_pred, _, transverse_component_pred = math.decompose_along_direction(pred[:,0:3], dir)
+             total_magnitude_true, _, transverse_component_true = math.decompose_along_direction(true[:,0:3], dir)
+             temp_true = transverse_component_true
+             temp_pred = transverse_component_pred
+             true = np.hstack((true, np.reshape(temp_true, (true.shape[0], 1))))
+             pred = np.hstack((pred, np.reshape(temp_pred, (pred.shape[0], 1))))
+         if 'TransverseAbsolute' in vertex_axis[i] and "positions" in target:
              total_magnitude_pred, _, transverse_component_pred = math.decompose_along_direction(pred[:,0:3], dir)
              total_magnitude_true, _, transverse_component_true = math.decompose_along_direction(true[:,0:3], dir)
              temp_true = transverse_component_true
@@ -313,38 +321,40 @@ def regression_analysis(from_path=True, dirpath='outputs', combine=True, true=No
                  plt.show()
 
          else:
+             if save_plots:
+                plt.figure(figsize=(5,5))
+                if len(vertex_axis) == 1:
+                    plt.scatter(true[:], pred[:], alpha=0.05, s=0.1, color=color)
+                else:
+                    plt.scatter(true[:,i], pred[:,i], alpha=0.05, s=0.1, color=color)
+                plt.plot(line, line, '--', color='black', alpha=0.5)
 
-             plt.figure(figsize=(5,5))
-             if len(vertex_axis) == 1:
-                plt.scatter(true[:], pred[:], alpha=0.05, s=0.1, color=color)
-             else:
-                plt.scatter(true[:,i], pred[:,i], alpha=0.05, s=0.1, color=color)
-             plt.plot(line, line, '--', color='black', alpha=0.5)
+                if "positions"in target and "Global" in vertex_axis[i]:
+                    plt.xlim(0,500) 
+                elif "directions"in target and "Angle" in vertex_axis[i]:
+                    plt.xlim(0,15) 
+                else:
+                    plt.xlim(-xlimit,xlimit) 
+                    plt.ylim(-ylimit,ylimit)
+                
+                plt.title(f'Event Vertex for {vertex_axis[i]} Axis')
+                unit = '[cm]'
+                if "directions" in target:
+                    unit=''
+                if "momentum" in target or "momenta" in target:
+                    unit='[MeV]'
+                plt.xlabel('True ' + target + ' ' + unit)
+                plt.ylabel('Predicted ' + target + ' ' + unit)
+                #plt.show()
+                plt.clf()
 
-
-
-             if "positions"in target and "Global" in vertex_axis[i]:
-                plt.xlim(0,500) 
-             elif "directions"in target and "Angle" in vertex_axis[i]:
-                plt.xlim(0,15) 
-             else:
-                plt.xlim(-xlimit,xlimit) 
-                plt.ylim(-ylimit,ylimit)
-
-             plt.title(f'Event Vertex for {vertex_axis[i]} Axis')
-             unit = '[cm]'
-             if "directions" in target:
-                 unit=''
-             if "momentum" in target or "momenta" in target:
-                 unit='[MeV]'
-             plt.xlabel('True ' + target + ' ' + unit)
-             plt.ylabel('Predicted ' + target + ' ' + unit)
-             #plt.show()
-             plt.clf()
+                
              if len(vertex_axis) == 1:
                 residuals = (true - pred)/true
              elif "Global" in vertex_axis[i] and "positions" in target:
                 residuals = true[:,i]
+             elif "TransverseAbsolute" in vertex_axis[i] and "positions" in target:
+                residuals = np.abs(true[:,i] - pred[:,i])
              else:
                 residuals = true[:,i] - pred[:,i] 
              cut = 500
@@ -391,33 +401,33 @@ def regression_analysis(from_path=True, dirpath='outputs', combine=True, true=No
              '''
 
              #plt.plot(line, gaussian(line, *popt), alpha=1, color='black', label='guassian fit')
-
-             dec_to_round = 2
-             if "directions" in target or "energies" in target or "momentum" in target or "momenta":
-                 dec_to_round = 5
-             # round numbers
-
-             if "momenta" in target or "momentum" in target:
-                plt.text(0.6, 0.7, '{} \n $\mu$ = {:.5f} $\pm${} {} \n Quant. = {:.5f} $\pm${} {}'.format(extra_string, round(numerical_median,dec_to_round), round_sig(median_error), unit, round(quantile, dec_to_round), round_sig(quantile_error), unit), fontsize=9, transform = plt.gca().transAxes, bbox=dict(facecolor='white', edgecolor='black', boxstyle='round,pad=1'))
-             else:
-                plt.text(0.6, 0.7, '{} \n $\mu$ = {:.2f} $\pm${} {} \n Quant. = {:.2f} $\pm${} {}'.format(extra_string, round(numerical_median,dec_to_round), round_sig(median_error), unit, round(quantile, dec_to_round), round_sig(quantile_error), unit), fontsize=9, transform = plt.gca().transAxes, bbox=dict(facecolor='white', edgecolor='black', boxstyle='round,pad=1'))
-
-             if "positions"in target and "Global" in vertex_axis[i]:
-                plt.xlim(0,xlimit) 
-             elif "directions"in target and "Angle" in vertex_axis[i]:
-                plt.xlim(0,15) 
-             else:
-                plt.xlim(-xlimit, xlimit)
-
-             plt.title(f'Event Vertex for {vertex_axis[i]} Axis')
-             if "energies" in target or "momentum" in target or "momenta" in target:
-                plt.xlabel('(true - predicted)/true ')
-             else:
-                plt.xlabel('true - predicted ' + unit)
-             plt.ylabel('count')
-             plt.yscale('log')
-             plt.ylim((0.1, 200000))
              if save_plots:
+                dec_to_round = 2
+                if "directions" in target or "energies" in target or "momentum" in target or "momenta":
+                    dec_to_round = 5
+                # round numbers
+                
+                if "momenta" in target or "momentum" in target:
+                    plt.text(0.6, 0.7, '{} \n $\mu$ = {:.5f} $\pm${} {} \n Quant. = {:.5f} $\pm${} {}'.format(extra_string, round(numerical_median,dec_to_round), round_sig(median_error), unit, round(quantile, dec_to_round), round_sig(quantile_error), unit), fontsize=9, transform = plt.gca().transAxes, bbox=dict(facecolor='white', edgecolor='black', boxstyle='round,pad=1'))
+                else:
+                    plt.text(0.6, 0.7, '{} \n $\mu$ = {:.2f} $\pm${} {} \n Quant. = {:.2f} $\pm${} {}'.format(extra_string, round(numerical_median,dec_to_round), round_sig(median_error), unit, round(quantile, dec_to_round), round_sig(quantile_error), unit), fontsize=9, transform = plt.gca().transAxes, bbox=dict(facecolor='white', edgecolor='black', boxstyle='round,pad=1'))
+
+                if "positions"in target and "Global" in vertex_axis[i]:
+                    plt.xlim(0,xlimit) 
+                elif "directions"in target and "Angle" in vertex_axis[i]:
+                    plt.xlim(0,15) 
+                else:
+                    plt.xlim(-xlimit, xlimit)
+
+                plt.title(f'Event Vertex for {vertex_axis[i]} Axis')
+                if "energies" in target or "momentum" in target or "momenta" in target:
+                    plt.xlabel('(true - predicted)/true ')
+                else:
+                    plt.xlabel('true - predicted ' + unit)
+                plt.ylabel('count')
+                plt.yscale('log')
+                plt.ylim((0.1, 200000))
+             
                 plt.savefig(f"{plot_path}/pred_{target}_{vertex_axis[i]}_{extra_string}.png")
              
              # debug

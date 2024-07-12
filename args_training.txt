@@ -1,9 +1,9 @@
---doMultiEvaluations
+--doTraining
 --numFolds=15
 --indicesInput=/data/fcormier/t2k/Public/oct20_eMuPosPion_0dwallCut_flat_1/combine_combine.hy
 --indicesOutputPath=/data/thoriba/t2k/indices/apr3_eMuPiPlus_1500MeV_small_1/
---evaluationInputDir=/data/thoriba/t2k/models/public/muon_mom_jun26/
---evaluationOutputDir=/data/thoriba/t2k/models/public/muon_mom_jun26/
+--evaluationInputDir=/data/thoriba/t2k/training/muon_momenta_dropout_ver2/resnet_jun26_muon_momenta_gt200Hits_timeO400S1000_2GeV_2M_DO0p05_1/09072024-085706/
+--evaluationOutputDir=/data/thoriba/t2k/training/muon_momenta_dropout_ver2/resnet_jun26_muon_momenta_gt200Hits_timeO400S1000_2GeV_2M_DO0p05_1/09072024-085706/
 --comparisonFolder=/fast_scratch/fcormier/t2k/ml/training/resnet_nov7_eMuPosPions_0dwall_1M_flat_1/
 --plotInput=/fast_scratch/fcormier/t2k/ml/training/oct20_aferreira_combine_flatE/
 --plotOutput=output/resnet_emu_weightDecay_sep13_test_1/

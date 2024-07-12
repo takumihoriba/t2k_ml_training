@@ -46,6 +46,8 @@ files = sys.argv[2:]
 colors = ['red', 'blue', 'green', 'black', 'pink']
 markers = ['.','^','o']
 
+plt.figure(figsize=(10, 5))
+
 for i, file in enumerate(files):
     x_temp, y_temp, x_best_temp, y_best_temp = output_column_from_csv(file, "loss")
     base_filename = os.path.basename(os.path.normpath(file))
@@ -56,7 +58,7 @@ for i, file in enumerate(files):
 
 plt.xlabel("Iteration")
 plt.ylabel("Loss")
-plt.ylim(0.1,10)
+plt.ylim(0.1,5)
 plt.yscale('log')
 plt.legend()
 plt.savefig(output_path)
