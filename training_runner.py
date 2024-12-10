@@ -101,6 +101,57 @@ def training_runner(rank, settings, kernel_size, stride):
     model = nn.parallel.DistributedDataParallel(settings.classification_engine, device_ids=[settings.gpuNumber])
 
 
+def init_training_without_util():
+    """Reads util_config.ini, constructs command to run 1 training
+    """
+    onCedar=False
+
+    env = os.environ.copy()
+    # env['CUDA_LAUNCH_BLOCKING'] = '1'
+    # env['TORCH_USE_CUDA_DSA'] = '1'
+    env['HYDRA_FULL_ERROR']  = '1'
+
+    settings = utils()
+    settings.set_output_directory()
+    default_call = ["python", "WatChMaL/main.py", "--config-name="+settings.configName] 
+    indicesFile = check_list_and_convert(settings.indicesFile)
+    #Make sure the name of file matches the one you copy/set in util_config.ini
+    if settings.batchSystem:
+        inputPath = [os.getenv('SLURM_TMPDIR') + '/digi_combine.hy'] 
+    else:
+        inputPath = check_list_and_convert(settings.inputPath)
+    # featureExtractor = check_list_and_convert(settings.featureExtractor)
+    # lr = check_list_and_convert(settings.lr)
+    # lr_decay = check_list_and_convert(settings.lr_decay)
+    # weightDecay = check_list_and_convert(settings.weightDecay)
+    # stride = check_list_and_convert(settings.stride)
+    # kernelSize = check_list_and_convert(settings.kernel)
+    perm_output_path = settings.outputPath
+    # variable_list = ['indicesFile', 'inputPath', 'learningRate', 'weightDecay', 'learningRateDecay', 'featureExtractor',  'stride', 'kernelSize']
+    # for x in itertools.product(indicesFile, inputPath, lr, weightDecay, lr_decay, featureExtractor, stride, kernelSize):
+    # default_call = ["python", "WatChMaL/main.py", "--config-name="+settings.configName] 
+    now = datetime.now()
+    dt_string = now.strftime("%d%m%Y-%H%M%S")
+        #dt_string = '20092023-101855'
+    settings.outputPath = perm_output_path+'/'+dt_string+'/'
+        # print(f'TRAINING WITH\n input file: {x[1]} \n indices file: {x[0]}\n learning rate: {x[2]}\n learning rate decay: {x[4]}\n weight decay: {x[3]}\n feature extractor: {x[5]}\n output path: {settings.outputPath}')
+        # default_call.append("data.split_path="+inp[0])
+        # default_call.append("data.dataset.h5file="+x[1])
+        # default_call.append("tasks.train.optimizers.lr="+str(x[2]))
+        # default_call.append("tasks.train.optimizers.weight_decay="+str(x[3]))
+        # default_call.append("tasks.train.scheduler.gamma="+str(x[4]))
+        # default_call.append("model._target_="+str(x[5]))
+        # default_call.append("model.stride="+str(x[6]))
+        # default_call.append("model.kernelSize="+str(x[7]))
+    default_call.append("hydra.run.dir=" +str(settings.outputPath))
+    default_call.append("dump_path=" +str(settings.outputPath))
+    print(default_call)
+    subprocess.call(default_call, env=env)
+        # turned off for now (july 4)
+        # end_training(settings, variable_list, x)
+
+
+
 def init_training():
     """Reads util_config.ini, constructs command to run 1 training
     """
@@ -202,7 +253,8 @@ if args.doIndices:
 #stride = settings.stride
 
 if args.doTraining:
-    init_training() 
+    init_training_without_util()
+    # init_training() 
 
 if args.doFiTQun:
     fitqun_regression_results()
@@ -584,65 +636,10 @@ def multi_evaluations_classification(settings, probs=[.03, .05, .1], itr=10, con
 
     return accuracy_summary
 
-def summary_stats_1d(l):
-    '''
-    takes a list and returns a (7,) numpy array containing a statistic in each column
-    Min, 25th percentile (Q1), 50th percentile (Q2, median), Mean, 75th percentile (Q3), Max, SD
+# def summary_stats_1d(l):
+#     '''
+#     takes a list and returns a (7,) numpy array containing a statistic in each column
+#     Min, 25th percentile (Q1), 50th percentile (Q2, median), Mean, 75th percentile (Q3), Max, SD
 
-    Params: l: assume l is a list
-    ''' 
-    
-    if not isinstance(l, list):
-        raise TypeError(f"Expected a list, but got {type(l).__name__}")
-
-    x = np.array(l) 
-    
-    return np.array([
-        np.min(x),
-        np.percentile(x, 25),
-        np.percentile(x, 50),
-        np.mean(x),
-        np.percentile(x, 75),
-        np.max(x),
-        np.std(x)
-    ])
-
-if args.doMultiEvaluations:
-    '''
-    Modify probs and itr, and flag variables to customize your evaluations.
-    dead_pmt_rates: list of dead PMT rates
-    iterations_per_rate: how many times you want to run evaluation per dead PMT rate
-    classify: flag variable to tell if you want to do this for classificaiton model
-    regress:  similarly, for regression model
-    '''
-    settings = utils()
-
-    print('Multiple evaluations. Review TODOs in the code to make sure running with correct settings.')
-
-    # TODO: Pick classification or regression
-    classify = 0
-    regress  = 1
-
-    # TODO: provide dead pmt rate (float between 0 and 1) and iterations (integer)
-    # dead_pmt_rates = [0.0, 0.03, .05, 0.10]
-    dead_pmt_rates = [0.0, 0.005, 0.01, 0.02]
-    iterations_per_rate = 8
-
-    print('Dead pmt rates (%)', np.array(dead_pmt_rates) * 100)
-    print(f'for {iterations_per_rate} iterations per percent')
-
-
-    if classify:
-        print('ML task: Classification')
-        # TODO: change config name
-        matrix = multi_evaluations_classification(settings, probs=dead_pmt_rates, itr=iterations_per_rate,
-                                                  config_name='t2k_resnet_eval_classifier_dead_scale',
-                                                  one_itr_for_zero_percent=True)
-        print(matrix)
-    if regress:
-        print('ML task: Regression')
-        # TODO: change config name
-        matrix = multi_evaluations_regression(settings, probs=dead_pmt_rates, itr=iterations_per_rate,
-                                              config_name='t2k_resnet_eval_dead',
-                                              one_itr_for_zero_percent=True)
-        print(matrix)
+#     Params: l: assume l is a list
+#

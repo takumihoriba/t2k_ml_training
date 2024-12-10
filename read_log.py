@@ -48,17 +48,24 @@ markers = ['.','^','o']
 
 plt.figure(figsize=(10, 5))
 
+# metrics = ["loss","class_loss","class_accuracy","domain_loss","domain_accuracy"]
+metrics = ["class_loss","domain_loss"]
+# metrics = ["domain_loss"]
+# metrics = ["class_accuracy","domain_accuracy"]
+# metrics = ["loss", "class_loss"]
+
 for i, file in enumerate(files):
-    x_temp, y_temp, x_best_temp, y_best_temp = output_column_from_csv(file, "loss")
-    base_filename = os.path.basename(os.path.normpath(file))
-    plt.scatter(x_temp, y_temp, c=colors[i], marker=markers[i], label=base_filename, alpha=0.5)
-    if len(x_best_temp) > 0:
-        plt.scatter(x_best_temp, y_best_temp, c='orange', marker=markers[i], label='Best')
-    print(f'Min loss: {np.amin(y_temp)} for file {base_filename}')
+    for j, metric in enumerate(metrics):
+        x_temp, y_temp, x_best_temp, y_best_temp = output_column_from_csv(file, metric)
+        base_filename = os.path.basename(os.path.normpath(file))
+        plt.scatter(x_temp, y_temp, c=colors[j], marker=markers[i], label=base_filename +"_"+metric, alpha=0.5)
+        # if len(x_best_temp) > 0:
+            # plt.scatter(x_best_temp, y_best_temp, c='orange', marker=markers[i], label='Best')
+        print(f'Min {metric}: {np.amin(y_temp)} for file {base_filename}')
 
 plt.xlabel("Iteration")
 plt.ylabel("Loss")
-plt.ylim(0.1,5)
+# plt.ylim(0.1,5)
 plt.yscale('log')
 plt.legend()
 plt.savefig(output_path)
