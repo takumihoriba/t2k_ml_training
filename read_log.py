@@ -51,7 +51,7 @@ plt.figure(figsize=(10, 5))
 # metrics = ["loss","class_loss","class_accuracy","domain_loss","domain_accuracy"]
 metrics = ["class_loss","domain_loss"]
 # metrics = ["domain_loss"]
-# metrics = ["class_accuracy","domain_accuracy"]
+metrics = ["class_accuracy","domain_accuracy"]
 # metrics = ["loss", "class_loss"]
 
 for i, file in enumerate(files):
